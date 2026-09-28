@@ -73,7 +73,7 @@ resume list                         # versions, the content dir in use, and appl
 resume show acme                    # plain text of a version
 resume diff base acme               # what a version changes
 resume check                        # guardrails on every version
-resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf} (+ page JPEGs)
+resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews
 resume build --all --out /tmp/x     # RESUME_KIT_OUT also sets the default directory
 resume score acme                   # score against the version's posting (or pass posting files)
 resume answers eeo                  # standard form answers

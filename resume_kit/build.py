@@ -16,6 +16,8 @@ from .content import REPO, Spec, content_dir, resolve
 
 RENDER_JS = Path(__file__).with_name("render.js")
 DEFAULT_OUT = Path(os.environ.get("RESUME_KIT_OUT", Path.home() / "Downloads"))
+# Page images are for looking at a build, not keeping, so they stay out of the output folder.
+PREVIEWS = Path(os.environ.get("RESUME_KIT_CACHE", Path.home() / ".cache" / "resume-kit")) / "previews"
 
 
 class BuildError(RuntimeError):
@@ -103,8 +105,12 @@ def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
     return BuildResult(version, docx, pdf, pages, spec.pages, overflow)
 
 
-def preview(pdf: Path, out_dir: Path, dpi: int = 80) -> list[Path]:
-    """Render each page to JPEG; returns the image paths."""
+def preview(pdf: Path, out_dir: Path | None = None, dpi: int = 80) -> list[Path]:
+    """Render each page to JPEG (in the preview cache by default); returns the image paths."""
+    out_dir = out_dir or PREVIEWS
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob(f"{pdf.stem}-*.jpg"):  # a longer earlier build would leave extra pages
+        old.unlink()
     prefix = out_dir / pdf.stem
     subprocess.run([_need("pdftoppm", "brew install poppler"), "-jpeg", "-r", str(dpi), str(pdf), str(prefix)],
                    check=True)

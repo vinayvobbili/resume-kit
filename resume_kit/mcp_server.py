@@ -56,7 +56,7 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
     if r.overflow:
         result["overflow_text"] = r.overflow
     if with_preview:
-        result["preview_images"] = [str(p) for p in preview(r.pdf, r.pdf.parent)]
+        result["preview_images"] = [str(p) for p in preview(r.pdf)]
     return result
 
 

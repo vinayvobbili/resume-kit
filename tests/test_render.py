@@ -2,7 +2,8 @@ import shutil
 
 import pytest
 
-from resume_kit.build import build, page_text
+from resume_kit import build as build_mod
+from resume_kit.build import build, page_text, preview
 from resume_kit.content import EXAMPLE_CONTENT, list_versions
 
 pytestmark = [
@@ -40,3 +41,14 @@ def test_build_refuses_guardrail_violations(content, tmp_path):
     variant.write_text(variant.read_text().replace("Security engineer with", "CISSP security engineer with"))
     with pytest.raises(Exception, match="cissp"):
         build("base", tmp_path)
+
+
+def test_previews_stay_out_of_the_output_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_mod, "PREVIEWS", tmp_path / "previews")
+    result = build("acme", tmp_path / "out")
+    stale = tmp_path / "previews" / f"{result.pdf.stem}-9.jpg"  # left by an earlier, longer build
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"")
+    images = preview(result.pdf)
+    assert [p.name for p in images] == [f"{result.pdf.stem}-1.jpg"]
+    assert not list((tmp_path / "out").glob("*.jpg"))

@@ -56,7 +56,7 @@ def cmd_build(args) -> int:
         print(result.summary())
         bad += not result.ok
         if args.preview:
-            for img in preview(result.pdf, Path(args.out)):
+            for img in preview(result.pdf):
                 print(f"  preview: {img}")
     return 1 if bad else 0
 
