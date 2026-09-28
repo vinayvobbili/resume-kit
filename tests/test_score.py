@@ -99,7 +99,7 @@ def test_shortlist_failure_is_reported(fake_shortlist, monkeypatch, tmp_path):
 def test_shortlist_not_installed(monkeypatch):
     monkeypatch.delenv("RESUME_KIT_SHORTLIST", raising=False)
     monkeypatch.setattr(score.shutil, "which", lambda _: None)
-    with pytest.raises(score.ScoreError, match="pip install shortlist-ai"):
+    with pytest.raises(score.ScoreError, match="git\\+https://github.com/vinayvobbili/shortlist-ai"):
         score.find_shortlist()
 
 

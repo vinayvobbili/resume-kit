@@ -103,7 +103,7 @@ Staff Detection Engineer: 79/100, must-haves 4/5
 
 A gap without a guardrail note usually means the experience is there but the resume doesn't show it clearly. That's worth a wording fix, backed by a fact in `profile.yaml`.
 
-Install shortlist-ai separately (`pip install shortlist-ai`), or point `RESUME_KIT_SHORTLIST` at its `shortlist` executable. `--backend local`, the default, runs an MLX model on Apple Silicon so the resume never leaves your machine. `--backend claude` uses the Anthropic API.
+Install shortlist-ai separately (`pip install 'shortlist-ai[local] @ git+https://github.com/vinayvobbili/shortlist-ai'`; drop `[local]` if you'll only use `--backend claude`), or point `RESUME_KIT_SHORTLIST` at its `shortlist` executable. `--backend local`, the default, runs an MLX model on Apple Silicon so the resume never leaves your machine. `--backend claude` uses the Anthropic API.
 
 ## MCP server
 

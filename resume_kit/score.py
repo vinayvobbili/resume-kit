@@ -26,11 +26,15 @@ class ScoreError(RuntimeError):
     pass
 
 
+# Not on PyPI yet; install from GitHub. [local] adds the on-device MLX backend (the default).
+SHORTLIST_PIP = "shortlist-ai[local] @ git+https://github.com/vinayvobbili/shortlist-ai"
+
+
 def find_shortlist() -> str:
     exe = os.environ.get("RESUME_KIT_SHORTLIST") or shutil.which("shortlist")
     if not exe:
-        raise ScoreError("shortlist-ai not found: pip install shortlist-ai, or set RESUME_KIT_SHORTLIST "
-                         "to its `shortlist` executable")
+        raise ScoreError(f"shortlist-ai not found: pip install '{SHORTLIST_PIP}', or set "
+                         "RESUME_KIT_SHORTLIST to its `shortlist` executable")
     return exe
 
 
