@@ -109,3 +109,12 @@ def test_relative_content_dir_gives_absolute_posting(fake_shortlist, monkeypatch
     score.score("acme")
     posting = Path(json.loads(fake_shortlist.read_text())[2])
     assert posting.is_absolute() and posting.exists()
+
+
+def test_unverified_evidence_lists_every_quote():
+    match = {**CANNED["matches"][0], "gap_notes": {}, "gaps": [], "requirements": [
+        {"requirement_id": "llm", "verdict": "partial", "evidence": ["LLM agents", "invented quote"],
+         "reasoning": "", "kind": "must_have", "evidence_verified": False}]}
+    text = score.to_text({"pdf": "r.pdf", "pages": 2, "flags": [], "matches": [match]})
+    assert "🟡 llm (must-have) ⚠️ a quote was not found in the resume" in text
+    assert "“LLM agents”" in text and "“invented quote”" in text

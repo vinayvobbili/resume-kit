@@ -81,9 +81,12 @@ def to_text(data: dict) -> str:
                 out.append(f"    - {g}" + (f"\n      real gap, don't add it; guardrail {'; '.join(notes)}" if notes else ""))
         out.append("  Requirements:")
         for r in m["requirements"]:
-            quote = f" “{r['evidence'][0]}”" if r["evidence"] else ""
-            unverified = "" if r["evidence_verified"] else " ⚠️ quote not found"
-            out.append(f"    {MARK[r['verdict']]} {r['requirement_id']} ({r['kind'].replace('_', '-')}){quote}{unverified}")
+            head = f"    {MARK[r['verdict']]} {r['requirement_id']} ({r['kind'].replace('_', '-')})"
+            if r["evidence_verified"]:
+                out.append(head + (f" “{r['evidence'][0]}”" if r["evidence"] else ""))
+            else:  # shortlist only says some quote failed, so show them all
+                out.append(head + " ⚠️ a quote was not found in the resume")
+                out += [f"        “{q}”" for q in r["evidence"]]
     for job, err in data.get("errors", {}).items():
         out.append(f"\n{job}: failed: {err}")
     return "\n".join(out) + "\n"

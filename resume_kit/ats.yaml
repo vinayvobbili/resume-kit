@@ -28,6 +28,16 @@ systems:
       - Upload the resume FIRST. Resume upload / autofill resets fields you already filled.
       - Yes/No button groups can look selected after a scripted click without registering. Use a real click (computer tool) and verify before submit.
       - The success page confirms submission. Some employers cap applications per period; check before applying to several roles.
+  lever:
+    hosts: [jobs.lever.co, jobs.eu.lever.co]
+    account: none needed
+    job_api: https://api.lever.co/v0/postings/<org>/<posting-id>
+    quirks:
+      - Upload the resume FIRST (name="resume"). Lever parses it and may prefill name, email, phone, and current company.
+      - Full name is a single field. Links go in urls[LinkedIn], urls[GitHub], urls[Other], etc.
+      - Employer questions are named cards[<uuid>][fieldN]. Read each label; required ones are marked ✱.
+      - The ?source= query parameter sets the application source. An employee referral is submitted by the employee from inside Lever, so get the referral in before applying directly.
+      - EEO fields (eeo[gender], eeo[race], eeo[veteran]) are optional selects.
   taleo:
     hosts: ["*.taleo.net"]
     account: candidate signs in (often with a social login)
