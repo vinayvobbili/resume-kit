@@ -1,0 +1,35 @@
+# Copy to answers.yaml in your content directory and fill it in. Keep that file out of
+# version control, since it holds your address and demographic answers. It's served by
+# `resume answers` and the application_answers MCP tool, so every form gets the same answers.
+contact:
+  full_name: Alex Rivera
+  email: alex.rivera@example.com
+  phone: "555-010-0199"
+  phone_type: cell
+  address: 1 Main St, Denver, CO 80202
+  nearest_metro: Denver, CO
+  linkedin: linkedin.com/in/alex-rivera-example
+  github: github.com/alex-rivera-example
+work_authorization:
+  authorized_us: true
+  sponsorship_now_or_future: false
+experience_years:
+  security: 8
+  python: 6
+screening:
+  non_compete_or_non_solicit: false
+  security_clearance: false
+  relocate: false
+salary:
+  form_answer_when_forced: Open to discussing a competitive package within the posted range.
+defaults:
+  sms_opt_in: false
+  marketing_email_opt_in: false
+  cookies: decline non-essential
+  follow_company_page: false
+eeo:
+  gender: Decline to self-identify
+  race: Decline to self-identify
+  hispanic_latino: Decline to self-identify
+  veteran: Decline to self-identify
+  disability: Decline to self-identify

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "resume-kit"
+version = "0.1.0"
+description = "Tailored resume versions from one fact library: build to .docx/.pdf, enforce 2 pages and fact guardrails, serve it all over MCP."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6",
+    "mcp>=2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.14"]
+
+[project.scripts]
+resume = "resume_kit.cli:main"
+resume-kit-mcp = "resume_kit.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["resume_kit"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.pytest.ini_options]
+markers = ["render: renders PDFs (needs node, soffice, poppler)"]

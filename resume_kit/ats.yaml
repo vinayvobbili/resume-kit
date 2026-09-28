@@ -1,0 +1,89 @@
+# Applicant-tracking-system quirks learned while filling real applications, plus
+# JavaScript helpers for browser automation. Served by `resume ats <name>` and the
+# ats_playbook MCP tool.
+
+rules:
+  - Stop before any Submit / Send button and get an explicit yes in chat.
+  - The candidate signs in, creates accounts, accepts privacy/arbitration terms, and signs eSignatures.
+  - Upload the tailored PDF built by `resume build <version>`, never an older file with a similar name.
+  - Take cookie, SMS, marketing-email, and follow-the-company choices from the `defaults` section of answers.yaml.
+  - Take a screenshot to confirm each page before moving on. Values set by script can look set without registering.
+
+systems:
+  greenhouse:
+    hosts: [job-boards.greenhouse.io, boards.greenhouse.io]
+    account: none needed
+    job_api: https://boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true
+    quirks:
+      - Dropdowns are react-select comboboxes. Click the control, type the option text, then press Enter or click the option. Do not script ArrowDown loops (one opened the phone-country list instead).
+      - The phone field has its own country picker; choose "United States +1".
+      - Gender can be a multi-select that shows chips; confirm exactly one chip.
+      - Plain text inputs accept the setNativeValue helper.
+      - A confirmation page appears after submit; screenshot it.
+  ashby:
+    hosts: [jobs.ashbyhq.com]
+    account: none needed
+    job_api: https://api.ashbyhq.com/posting-api/job-board/<org>?includeCompensation=true
+    quirks:
+      - Upload the resume FIRST. Resume upload / autofill resets fields you already filled.
+      - Yes/No button groups can look selected after a scripted click without registering. Use a real click (computer tool) and verify before submit.
+      - The success page confirms submission. Some employers cap applications per period; check before applying to several roles.
+  taleo:
+    hosts: ["*.taleo.net"]
+    account: candidate signs in (often with a social login)
+    steps: [Profile Upload, Attachments, About You, Education & Experience, Job Profile Questions, eSignature, Review & Submit]
+    quirks:
+      - Radio and checkbox clicks trigger a postback that reloads the page and clears file uploads. Answer radios first, upload last, then re-check that the upload is still there.
+      - A session reload can open the page in a new tab and clear some fields. Re-read every field before Next.
+      - Native <select> elements are set with setSelect (value + change event). Toggle checkboxes with .click(), never by setting .checked.
+      - Qualification checklists are left unticked unless the candidate really has the skill.
+      - The final page says "Process completed".
+  workday:
+    hosts: ["*.myworkdayjobs.com"]
+    account: candidate signs in
+    quirks:
+      - Usually refuses a second application to the same requisition from the same account.
+      - Candidate Home shows application status (e.g. "Under review", "No longer under consideration").
+      - Offers Autofill with Resume / Apply Manually / Use My Last Application.
+  linkedin:
+    hosts: [www.linkedin.com]
+    account: candidate is signed in
+    quirks:
+      - Easy Apply has a "Follow <company>" checkbox, checked by default. Uncheck it.
+      - Top-choice marks are limited (3 per month) and carry a short message; use them only when asked.
+      - When there's no Easy Apply, the Apply button leads to the company ATS; use that system's notes.
+  eightfold:
+    hosts: ["*.eightfold.ai"]
+    quirks:
+      - The job description renders client-side. Read it with the page-text tool, not a plain HTTP fetch.
+
+helpers:
+  setNativeValue: |
+    // React-controlled <input>/<textarea>: set the value so React's onChange fires.
+    function setNativeValue(el, value) {
+      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    }
+  setSelect: |
+    // Native <select> (Taleo, Workday legacy): pick by visible text, then fire change.
+    function setSelect(el, text) {
+      const opt = [...el.options].find(o => o.text.trim() === text) || [...el.options].find(o => o.text.includes(text));
+      if (!opt) return `no option matching ${text}: ${[...el.options].map(o => o.text.trim()).join(' | ')}`;
+      el.value = opt.value;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return `set ${el.name || el.id} = ${opt.text.trim()}`;
+    }
+  emptyRequired: |
+    // List required fields that are still empty, so nothing is missed before Next/Submit.
+    [...document.querySelectorAll('input, select, textarea')]
+      .filter(el => (el.required || el.getAttribute('aria-required') === 'true') && el.type !== 'hidden')
+      .filter(el => (el.type === 'radio' || el.type === 'checkbox')
+        ? !document.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`)
+        : !el.value)
+      .map(el => `${el.tagName.toLowerCase()} ${el.name || el.id} (${el.labels?.[0]?.innerText.trim() || el.getAttribute('aria-label') || ''})`);
+  fileInputs: |
+    // Where the resume goes: list file inputs and what (if anything) is attached.
+    [...document.querySelectorAll('input[type=file]')].map(el => `${el.name || el.id}: ${[...el.files].map(f => f.name).join(', ') || '(empty)'}`);

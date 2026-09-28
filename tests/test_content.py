@@ -1,0 +1,128 @@
+import pytest
+import yaml
+
+from resume_kit import apply, facts
+from resume_kit.content import ContentError, list_versions, load_profile, resolve
+
+
+def write_variant(content, name, data):
+    (content / "variants" / f"{name}.yaml").write_text(yaml.safe_dump(data, allow_unicode=True))
+
+
+def test_example_versions():
+    assert list_versions() == ["acme", "base"]
+
+
+@pytest.mark.parametrize("version", ["base", "acme"])
+def test_example_versions_resolve_and_pass_guardrails(version):
+    spec = resolve(version)
+    assert facts.check(spec) == []
+    assert spec.pages == 1
+
+
+def test_profile_ids_are_globally_unique(content):
+    load_profile()
+    profile = (content / "profile.yaml").read_text()
+    (content / "profile.yaml").write_text(profile.replace("  gcih: GIAC", "  detection: GIAC"))
+    with pytest.raises(ContentError, match="duplicate id 'detection'"):
+        load_profile()
+
+
+def test_extends_inherits_and_drop_removes_everywhere(content):
+    write_variant(content, "t", {"extends": "acme", "output": "t", "drop": ["vuln_program", "sigma_lint", "gcih"]})
+    spec, acme = resolve("t"), resolve("acme")
+    assert spec.headline == acme.headline and spec.certs_inline
+    assert spec.roles[1]["bullets"] == acme.roles[1]["bullets"][:-1]
+    assert spec.open_source == []
+    assert spec.certs == ["AWS Certified Security – Specialty"]
+    assert "OPEN SOURCE" not in spec.text()
+
+
+def test_role_override_only_touches_that_role(content):
+    write_variant(content, "t", {"extends": "base", "output": "t", "roles": {"contoso": ["soc_triage"]}})
+    spec, base = resolve("t"), resolve("base")
+    assert len(spec.roles[1]["bullets"]) == 1
+    assert spec.roles[0] == base.roles[0]
+
+
+def test_posting_and_pages_resolve_relative_to_content(content):
+    write_variant(content, "t", {"extends": "acme", "output": "t", "pages": 2})
+    spec = resolve("t")
+    assert spec.pages == 2
+    assert spec.posting == content / "postings" / "acme-detection-engineer.md"
+
+
+@pytest.mark.parametrize("data, message", [
+    ({"extends": "base", "output": "t", "skills": ["nope"]}, "unknown skills id"),
+    ({"extends": "base", "output": "t", "roles": {"northwind": ["soc_triage"]}}, "unknown roles.northwind"),
+    ({"extends": "base", "output": "t", "roles": {"acme": []}}, "unknown role id"),
+    ({"extends": "t", "output": "t"}, "extends cycle"),
+    ({"headline": "x"}, "has no 'output'"),
+])
+def test_bad_versions_fail_loudly(content, data, message):
+    write_variant(content, "t", data)
+    with pytest.raises(ContentError, match=message):
+        resolve("t")
+
+
+@pytest.mark.parametrize("bad, rule", [
+    ("Secured production Kubernetes clusters", "kubernetes"),
+    ("CISSP", "cissp"),
+    ("adopted by 40 teams", "stale-team-count"),
+])
+def test_forbidden_rules_catch_claims(bad, rule):
+    text = resolve("base").text() + bad
+    assert any(v.startswith(f"{rule}:") for v in facts.load().violations(text))
+
+
+def test_required_rules_catch_missing_facts():
+    text = resolve("base").text().replace("BS in Computer Science", "BS in Physics")
+    assert [v.split(":")[0] for v in facts.load().violations(text)] == ["degree"]
+
+
+def test_case_sensitive_rules(content):
+    (content / "guardrails.yaml").write_text(yaml.safe_dump({"forbidden": [
+        {"id": "go", "pattern": r"(?<![\w-])Go(?=[,;/)])", "why": "no Go", "case_sensitive": True}]}))
+    rails = facts.load()
+    assert rails.violations("Python, Go, SQL")
+    assert not rails.violations("years ago, then")
+
+
+def test_no_guardrails_file_means_no_rules(content):
+    (content / "guardrails.yaml").unlink()
+    assert facts.check(resolve("base")) == []
+
+
+def test_bad_guardrail_pattern_is_reported(content):
+    (content / "guardrails.yaml").write_text("forbidden:\n  - {id: broken, pattern: '(', why: x}\n")
+    with pytest.raises(ContentError, match="broken"):
+        facts.load()
+
+
+def test_answers(content):
+    assert apply.answers("defaults")["defaults"]["sms_opt_in"] is False
+    with pytest.raises(ContentError, match="no section"):
+        apply.answers("nope")
+
+
+def test_missing_answers_file_explains_itself():
+    with pytest.raises(ContentError, match="answers.example.yaml"):
+        apply.answers()
+
+
+@pytest.mark.parametrize("query, system", [
+    ("greenhouse", "greenhouse"),
+    ("https://jobs.ashbyhq.com/acme/123/application", "ashby"),
+    ("acme.taleo.net", "taleo"),
+    ("acme.eightfold.ai", "eightfold"),
+    ("https://www.linkedin.com/jobs/view/1", "linkedin"),
+])
+def test_ats_lookup_by_name_or_url(query, system):
+    pb = apply.ats_playbook(query)
+    assert pb["system"] == system
+    assert pb["quirks"] and pb["rules"] and "setNativeValue" in pb["helpers"]
+
+
+def test_unknown_ats():
+    with pytest.raises(ContentError):
+        apply.ats_playbook("icims")

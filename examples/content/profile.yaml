@@ -1,0 +1,66 @@
+# Example content: a fictional candidate. Copy this directory, replace the facts with
+# your own, and point resume-kit at it (RESUME_KIT_CONTENT or ~/.config/resume-kit/content).
+#
+# Every fact that can appear on a resume lives here, once, keyed by id. Versions in
+# variants/ pick and order ids and never restate text. Ids are unique across skills,
+# role bullets, open-source items, and certs, so `drop:` can name any of them.
+# Skill and open-source entries render as "Label: rest", with the label in bold.
+
+name: Alex Rivera
+pages: 1            # target page count; a version can override it
+contact:
+- alex.rivera@example.com
+- +1 (555) 010-0199
+- Denver, CO (Remote)
+- github.com/alex-rivera-example
+skills:
+  cloud_security: 'Cloud Security: AWS IAM and SCPs, GuardDuty, Security Hub, KMS, VPC design, CloudTrail analytics'
+  detection: 'Detection & Response: Sigma, Splunk SPL, detection-as-code with CI tests, incident handling, threat hunting'
+  appsec: 'Application Security: Threat modeling, SAST/DAST in CI, dependency and secret scanning, secure code review'
+  engineering: 'Engineering: Python, Go, SQL, Terraform, Docker, GitHub Actions, PostgreSQL'
+roles:
+- id: northwind
+  title: Senior Security Engineer
+  org: Northwind Traders, Denver, CO
+  dates: Mar 2021 – Present
+  bullets:
+    iam_guardrails: >-
+      Designed organization-wide IAM guardrails (SCPs, permission boundaries) for 140 AWS accounts, cutting
+      standing admin access by 85% without slowing deployments
+    detection_as_code: >-
+      Moved 300+ detections to detection-as-code: Sigma rules with unit tests and replay against 30 days of
+      logs in CI, lowering false positives by 40%
+    ir_lead: >-
+      Led response to a credential-stuffing campaign and a leaked-key incident; wrote the postmortems and
+      shipped the fixes (key rotation automation, login rate limits)
+    paved_road: >-
+      Built a paved-road service template with secret scanning, SAST, and signed builds that 60 teams
+      adopted within two quarters
+    threat_models: >-
+      Ran threat-modeling sessions for payments and identity services, turning findings into tracked,
+      owner-assigned backlog items
+- id: contoso
+  title: Security Analyst
+  org: Contoso Bank, Austin, TX
+  dates: Jun 2017 – Feb 2021
+  bullets:
+    soc_triage: >-
+      Triaged 150+ alerts a week across SIEM and EDR; wrote Splunk searches that became the team's
+      standard phishing and impossible-travel detections
+    phishing_automation: >-
+      Automated phishing triage with a Python and SOAR pipeline, cutting median handling time from 25 to
+      6 minutes
+    vuln_program: >-
+      Ran the monthly vulnerability review with infrastructure teams and brought critical-finding
+      remediation under the 14-day SLA
+open_source:
+  heading: Open Source
+  items:
+    sigma_lint: 'sigma-lint: A linter and test runner for Sigma rules, used in CI by several detection teams'
+    iam_diff: 'iam-diff: Shows the effective permission change of an IAM policy pull request before merge'
+education:
+- school: University of Colorado Boulder
+  degree: BS in Computer Science, 2017
+certs:
+  aws_security: AWS Certified Security – Specialty
+  gcih: GIAC Certified Incident Handler (GCIH)

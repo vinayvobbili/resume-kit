@@ -1,0 +1,14 @@
+title: Base resume
+output: Alex_Rivera_Resume
+headline: Senior Security Engineer  •  Cloud Security, Detection Engineering & Incident Response
+summary: >-
+  Security engineer with 8 years across cloud security, detection engineering, and incident response.
+  Builds guardrails that teams adopt because they make the secure path the easy one: IAM boundaries for
+  140 AWS accounts, detection-as-code with tests in CI, and a paved-road service template used by 60 teams.
+skills: [cloud_security, detection, appsec, engineering]
+roles:
+  northwind: [iam_guardrails, detection_as_code, ir_lead, paved_road, threat_models]
+  contoso: [soc_triage, phishing_automation, vuln_program]
+open_source: [sigma_lint, iam_diff]
+certs: [aws_security, gcih]
+certs_inline: true

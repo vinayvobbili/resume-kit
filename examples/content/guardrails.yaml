@@ -1,0 +1,20 @@
+# Claims that must never appear on a resume, and facts that must. Every rule says why.
+# `resume build` refuses to render a version that trips one, and `resume score` labels
+# job-posting gaps that match a forbidden rule as real gaps rather than wording problems.
+# Patterns are Python regexes, case-insensitive unless case_sensitive: true.
+
+forbidden:
+  - id: kubernetes
+    pattern: Kubernetes|\bK8s\b
+    why: Only tutorial-level Kubernetes; nothing production.
+  - id: cissp
+    pattern: CISSP
+    why: Not certified (the exam is scheduled, not passed).
+  - id: stale-team-count
+    pattern: \b40 teams\b
+    why: Paved-road adoption is 60 teams as of the last count.
+
+required:
+  - id: degree
+    pattern: University of Colorado Boulder — BS in Computer Science
+    why: Education line must match the diploma.

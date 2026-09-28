@@ -1,0 +1,14 @@
+# A tailored version: inherit everything from base, change only what this job needs.
+extends: base
+title: Acme Corp — Staff Detection Engineer
+output: Alex_Rivera_Resume_Acme_Detection
+posting: postings/acme-detection-engineer.md   # used by `resume score acme`
+headline: Staff Detection Engineer  •  Detection-as-Code, Threat Hunting & Incident Response
+summary: >-
+  Detection engineer with 8 years in security operations and cloud security. Moved 300+ detections to
+  detection-as-code with unit tests and log replay in CI, cut false positives by 40%, and led incident
+  response for credential-stuffing and leaked-key events.
+skills: [detection, cloud_security, engineering, appsec]
+roles:
+  northwind: [detection_as_code, ir_lead, iam_guardrails, paved_road]
+drop: [iam_diff]
