@@ -99,7 +99,7 @@ def test_shortlist_failure_is_reported(fake_shortlist, monkeypatch, tmp_path):
 def test_shortlist_not_installed(monkeypatch):
     monkeypatch.delenv("RESUME_KIT_SHORTLIST", raising=False)
     monkeypatch.setattr(score.shutil, "which", lambda _: None)
-    with pytest.raises(score.ScoreError, match="git\\+https://github.com/vinayvobbili/shortlist-ai"):
+    with pytest.raises(score.ScoreError, match=r"pip install 'shortlist-ai\[local\]'"):
         score.find_shortlist()
 
 
@@ -118,3 +118,12 @@ def test_unverified_evidence_lists_every_quote():
     text = score.to_text({"pdf": "r.pdf", "pages": 2, "flags": [], "matches": [match]})
     assert "🟡 llm (must-have) ⚠️ a quote was not found in the resume" in text
     assert "“LLM agents”" in text and "“invented quote”" in text
+
+
+def test_names_the_failing_quote_when_shortlist_reports_it():
+    match = {**CANNED["matches"][0], "gap_notes": {}, "gaps": [], "requirements": [
+        {"requirement_id": "llm", "verdict": "partial", "evidence": ["LLM agents", "invented quote"],
+         "reasoning": "", "kind": "must_have", "evidence_verified": False, "unverified_quotes": ["invented quote"]}]}
+    text = score.to_text({"pdf": "r.pdf", "pages": 2, "flags": [], "matches": [match]})
+    assert "“invented quote”  ← not found" in text
+    assert "“LLM agents”\n" in text

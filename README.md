@@ -103,7 +103,7 @@ Staff Detection Engineer: 79/100, must-haves 4/5
 
 A gap without a guardrail note usually means the experience is there but the resume doesn't show it clearly. That's worth a wording fix, backed by a fact in `profile.yaml`.
 
-Install shortlist-ai separately (`pip install 'shortlist-ai[local] @ git+https://github.com/vinayvobbili/shortlist-ai'`; drop `[local]` if you'll only use `--backend claude`), or point `RESUME_KIT_SHORTLIST` at its `shortlist` executable. `--backend local`, the default, runs an MLX model on Apple Silicon so the resume never leaves your machine. `--backend claude` uses the Anthropic API.
+Install shortlist-ai separately (`pip install 'shortlist-ai[local]'`; drop `[local]` if you'll only use `--backend claude`), or point `RESUME_KIT_SHORTLIST` at its `shortlist` executable. `--backend local`, the default, runs an MLX model on Apple Silicon so the resume never leaves your machine. `--backend claude` uses the Anthropic API.
 
 ## MCP server
 
@@ -124,7 +124,7 @@ Its instructions tell the assistant never to add unconfirmed facts, and never to
 
 ## Applicant tracking systems
 
-`resume_kit/ats.yaml` collects quirks of Greenhouse, Ashby, Taleo, Workday, LinkedIn, and Eightfold, learned while filling in real applications. It also has JavaScript helpers for setting React-controlled inputs and native selects, and for listing required fields that are still empty. It's meant for an assistant filling in a form under your supervision, and its first rule is to stop before Submit.
+`resume_kit/ats.yaml` collects quirks of Greenhouse, Ashby, Taleo, Workday, LinkedIn, and Eightfold, learned while filling in real applications. It also has JavaScript helpers for mapping an unfamiliar form's fields (labels, required flags, choices), setting React-controlled inputs and native selects, and listing required fields that are still empty. It's meant for an assistant filling in a form under your supervision, and its first rule is to stop before Submit.
 
 ## Tests
 

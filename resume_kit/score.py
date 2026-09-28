@@ -26,8 +26,8 @@ class ScoreError(RuntimeError):
     pass
 
 
-# Not on PyPI yet; install from GitHub. [local] adds the on-device MLX backend (the default).
-SHORTLIST_PIP = "shortlist-ai[local] @ git+https://github.com/vinayvobbili/shortlist-ai"
+# [local] adds the on-device MLX backend, which is the default.
+SHORTLIST_PIP = "shortlist-ai[local]"
 
 
 def find_shortlist() -> str:
@@ -88,9 +88,11 @@ def to_text(data: dict) -> str:
             head = f"    {MARK[r['verdict']]} {r['requirement_id']} ({r['kind'].replace('_', '-')})"
             if r["evidence_verified"]:
                 out.append(head + (f" “{r['evidence'][0]}”" if r["evidence"] else ""))
-            else:  # shortlist only says some quote failed, so show them all
+            else:
                 out.append(head + " ⚠️ a quote was not found in the resume")
-                out += [f"        “{q}”" for q in r["evidence"]]
+                # shortlist-ai >= 0.1.1 names the failing quotes; older versions only say one failed.
+                missing = set(r.get("unverified_quotes", r["evidence"]))
+                out += [f"        “{q}”" + ("  ← not found" if q in missing else "") for q in r["evidence"]]
     for job, err in data.get("errors", {}).items():
         out.append(f"\n{job}: failed: {err}")
     return "\n".join(out) + "\n"

@@ -1,3 +1,7 @@
+import json
+import shutil
+import subprocess
+
 import pytest
 import yaml
 
@@ -126,3 +130,13 @@ def test_ats_lookup_by_name_or_url(query, system):
 def test_unknown_ats():
     with pytest.raises(ContentError):
         apply.ats_playbook("icims")
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="needs node")
+@pytest.mark.parametrize("name", list(apply.ats_playbook("lever")["helpers"]))
+def test_ats_helpers_are_valid_javascript(name, tmp_path):
+    # Helpers are pasted into a page as-is, so a syntax error only shows up mid-application.
+    script = tmp_path / "helper.js"
+    script.write_text(f"new Function({json.dumps(apply.ats_playbook('lever')['helpers'][name])});\n")
+    run = subprocess.run(["node", str(script)], capture_output=True, text=True, check=False)
+    assert run.returncode == 0, run.stderr

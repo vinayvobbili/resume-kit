@@ -35,7 +35,7 @@ systems:
     quirks:
       - Upload the resume FIRST (name="resume"). Lever parses it and may prefill name, email, phone, and current company.
       - Full name is a single field. Links go in urls[LinkedIn], urls[GitHub], urls[Other], etc.
-      - Employer questions are named cards[<uuid>][fieldN]. Read each label; required ones are marked ✱.
+      - Employer questions are named cards[<uuid>][fieldN]. Run the listFields helper to map them; required ones are marked ✱.
       - The ?source= query parameter sets the application source. An employee referral is submitted by the employee from inside Lever, so get the referral in before applying directly.
       - EEO fields (eeo[gender], eeo[race], eeo[veteran]) are optional selects.
   taleo:
@@ -86,6 +86,33 @@ helpers:
       el.dispatchEvent(new Event('change', { bubbles: true }));
       return `set ${el.name || el.id} = ${opt.text.trim()}`;
     }
+  listFields: |
+    // Map an unfamiliar form before filling it: one line per field (radio/checkbox groups
+    // collapsed), with its label, name, type, required flag, and the choices a select or group offers.
+    (() => {
+      // Visible text of a label or heading, leaving out any part that holds a control (a wrapping
+      // <label> would otherwise include every option). innerText skips hidden status messages.
+      const hasControl = n => n.nodeType === 1 && (n.matches('select, input, textarea') || n.querySelector('select, input, textarea'));
+      const textOf = n => [...n.childNodes].filter(c => !hasControl(c)).map(c => c.nodeType === 1 ? c.innerText : c.textContent).join(' ');
+      // A group's own <label>s name its options: use the nearest heading above the whole group.
+      const heading = el => { for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) {
+        const h = e.querySelector(':scope > legend, :scope > [class*="label"]'); if (h && !h.contains(el)) return textOf(h); } };
+      const labelOf = (el, group) => ((group ? heading(el) : el.labels?.[0] && textOf(el.labels[0]))
+        || el.getAttribute('aria-label') || heading(el) || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+      const seen = new Map();
+      for (const el of document.querySelectorAll('input, select, textarea')) {
+        if (el.type === 'hidden' || el.type === 'submit') continue;
+        const group = el.type === 'radio' || el.type === 'checkbox';
+        const key = group ? `${el.type}:${el.name}` : el;
+        if (group && seen.has(key)) { seen.get(key).choices.push(el.value); continue; }
+        seen.set(key, { name: el.name || el.id, type: el.tagName === 'SELECT' ? 'select' : el.type,
+          required: el.required || el.getAttribute('aria-required') === 'true', label: labelOf(el, group),
+          choices: el.tagName === 'SELECT' ? [...el.options].map(o => o.text.trim()).filter(Boolean)
+                 : group ? [el.value] : [] });
+      }
+      return [...seen.values()].map(f => `${f.required ? '*' : ' '} ${f.name} [${f.type}] ${f.label}`
+        + (f.choices.length ? `  {${f.choices.join(' | ').slice(0, 200)}}` : '')).join('\n');
+    })()
   emptyRequired: |
     // List required fields that are still empty, so nothing is missed before Next/Submit.
     [...document.querySelectorAll('input, select, textarea')]
