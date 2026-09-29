@@ -50,10 +50,23 @@ def test_role_override_only_touches_that_role(content):
 
 
 def test_posting_and_pages_resolve_relative_to_content(content):
-    write_variant(content, "t", {"extends": "acme", "output": "t", "pages": 2})
+    write_variant(content, "t", {"extends": "base", "output": "t", "pages": 2,
+                                 "posting": "postings/acme-detection-engineer.md"})
     spec = resolve("t")
     assert spec.pages == 2
     assert spec.posting == content / "postings" / "acme-detection-engineer.md"
+
+
+def test_a_version_does_not_inherit_its_parents_application(content):
+    # Tailoring a resume for job B from job A's version: B's content starts as A's, but A's
+    # posting, applied date, notes and title belong to A.
+    write_variant(content, "a", {"extends": "base", "output": "a", "title": "Job A", "applied": "2026-01-02",
+                                 "notes": "referred", "posting": "postings/acme-detection-engineer.md",
+                                 "headline": "A headline"})
+    write_variant(content, "b", {"extends": "a", "output": "b"})
+    spec = resolve("b")
+    assert spec.headline == "A headline"
+    assert (spec.title, spec.posting, spec.meta) == ("b", None, {})
 
 
 @pytest.mark.parametrize("data, message", [

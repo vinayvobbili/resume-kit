@@ -4,8 +4,10 @@ A content directory holds profile.yaml (every fact, keyed by id), variants/<name
 (one resume version each), and optionally guardrails.yaml, answers.yaml, and postings/.
 
 A version may `extends:` another version and override any of: headline, summary,
-skills, roles (per role id), open_source, certs, certs_inline, pages, posting.
-`drop:` removes ids from every list after overrides apply.
+skills, roles (per role id), open_source, certs, certs_inline, pages.
+`drop:` removes ids from every list after overrides apply. What identifies one
+application (title, output, posting, applied, notes) is never inherited: a version
+tailored from another is a different application, not a copy of the first.
 """
 
 from __future__ import annotations
@@ -22,7 +24,8 @@ USER_CONTENT = Path.home() / ".config" / "resume-kit" / "content"
 EXAMPLE_CONTENT = REPO / "examples" / "content"
 
 LIST_KEYS = ("skills", "open_source", "certs")
-SCALAR_KEYS = ("title", "output", "headline", "summary", "certs_inline", "pages", "posting", "applied", "notes")
+SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages")
+OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
 
 
 class ContentError(ValueError):
@@ -150,6 +153,8 @@ def raw_version(name: str, content: Path | None = None) -> dict:
                 merged[k] = v[k]
         merged["roles"].update(v.get("roles", {}))
         merged["drop"] += v.get("drop", [])
+    own = _read(variants / f"{name}.yaml")
+    merged.update({k: own[k] for k in OWN_KEYS if k in own})
     merged["version"] = name
     return merged
 
@@ -158,7 +163,9 @@ def resolve(name: str, content: Path | None = None) -> Spec:
     content = content or content_dir()
     profile = load_profile(content)
     v = raw_version(name, content)
-    for k in ("output", "headline", "summary", "skills"):
+    if "output" not in v:
+        raise ContentError(f"version {name!r} has no 'output' (every version names its own file)")
+    for k in ("headline", "summary", "skills"):
         if k not in v:
             raise ContentError(f"version {name!r} has no {k!r} (set it, or extend a version that does)")
     drop = set(v["drop"])

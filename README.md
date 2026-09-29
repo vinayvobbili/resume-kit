@@ -49,7 +49,7 @@ postings/             saved job descriptions, for `resume score`
 answers.yaml          your standard application-form answers (copy answers.example.yaml)
 ```
 
-A tailored version inherits everything it doesn't set:
+A tailored version inherits the resume content it doesn't set. What belongs to one application (`title`, `output`, `posting`, `applied`, `notes`) is never inherited, so a version tailored from another doesn't pick up its posting or applied date:
 
 ```yaml
 # variants/acme.yaml
