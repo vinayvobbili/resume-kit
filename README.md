@@ -66,12 +66,21 @@ roles:
 drop: [iam_diff]                                                          # remove ids from any list
 ```
 
+To start a tailored version from a job posting, let resume-kit draft it:
+
+```sh
+resume draft acme-sre posting.md --title "Acme — Senior SRE"   # or: some-command | resume draft acme-sre -
+```
+
+The draft extends the existing version that reads most like the posting and keeps its shape (how many skills, bullets and open-source items), so the page target holds. It picks and orders ids by how much of the posting's wording each fact shares, and uses only one wording of a fact when the profile keeps several. Nothing is reworded: the headline and summary stay the parent's until you tailor them, so the guardrails still hold. It also lists posting terms that no fact mentions: possible gaps, or just different wording.
+
 ## CLI
 
 ```sh
 resume list                         # versions, the content dir in use, and applied dates
 resume show acme                    # plain text of a version
 resume diff base acme               # what a version changes
+resume draft acme-sre posting.md    # draft a tailored version from a posting
 resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews
 resume build --all --out /tmp/x     # RESUME_KIT_OUT also sets the default directory

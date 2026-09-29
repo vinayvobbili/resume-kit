@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from . import apply, facts, score
+from . import apply, draft, facts, score
 from .build import DEFAULT_OUT, BuildError, build, preview
 from .content import ContentError, content_dir, list_versions, raw_version, resolve
 
@@ -59,6 +59,13 @@ def cmd_build(args) -> int:
             for img in preview(result.pdf):
                 print(f"  preview: {img}")
     return 1 if bad else 0
+
+
+def cmd_draft(args) -> int:
+    text = sys.stdin.read() if args.posting == "-" else Path(args.posting).expanduser().read_text()
+    d = draft.draft(args.name, text, title=args.title, parent=args.parent, output=args.output, force=args.force)
+    print(d.summary())
+    return 0
 
 
 def cmd_score(args) -> int:
@@ -109,6 +116,15 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--out", default=str(DEFAULT_OUT), help=f"output directory (default {DEFAULT_OUT})")
     s.add_argument("--preview", action="store_true", help="also write page JPEGs")
     s.set_defaults(fn=cmd_build)
+
+    s = sub.add_parser("draft", help="draft a tailored version from a job posting (facts ordered by relevance)")
+    s.add_argument("name", help="new version name, e.g. acme-sre")
+    s.add_argument("posting", help="posting text file, or - to read it from stdin")
+    s.add_argument("--title", help="version title (default: the name)")
+    s.add_argument("--from", dest="parent", help="version to extend (default: the one closest to the posting)")
+    s.add_argument("--output", help="output file stem")
+    s.add_argument("--force", action="store_true", help="overwrite an existing version")
+    s.set_defaults(fn=cmd_draft)
 
     s = sub.add_parser("score", help="score a version against job postings with shortlist-ai")
     s.add_argument("version")

@@ -13,7 +13,7 @@ def call(name, args):
 
 def test_tools_are_registered():
     names = {t.name for t in asyncio.run(server.list_tools())}
-    assert names == {"list_versions", "show_version", "check_facts", "build_version", "score_version",
+    assert names == {"list_versions", "show_version", "check_facts", "build_version", "score_version", "draft_version",
                      "application_answers", "ats_playbook"}
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 
-from . import apply, facts, score
+from . import apply, draft, facts, score
 from .build import DEFAULT_OUT, build, preview
 from .content import content_dir, raw_version, resolve
 from .content import list_versions as _list_versions
@@ -15,8 +15,8 @@ server = MCPServer(
     "resume-kit",
     instructions=(
         "Tailored resume versions built from one fact library (a content directory; list_versions shows "
-        "which). To tailor a resume for a job, add variants/<name>.yaml (extends: base) that picks and "
-        "orders ids from profile.yaml, then call build_version; it must hit its page target and pass "
+        "which). To tailor a resume for a job, call draft_version with the posting (or write variants/<name>.yaml "
+        "that picks and orders ids from profile.yaml), tailor its headline and summary, then call build_version; it must hit its page target and pass "
         "check_facts. score_version shows what a screener sees missing. Never add a claim to profile.yaml "
         "that the candidate has not confirmed, and never close a gap that a guardrail marks as real."
     ),
@@ -49,7 +49,7 @@ def check_facts(version: str | None = None) -> dict:
 
 @server.tool()
 def build_version(version: str, out_dir: str | None = None, with_preview: bool = False) -> dict:
-    """Render .docx and .pdf (default ~/Downloads), check the page target, report overflow text."""
+    """Render .docx and .pdf (default ~/Downloads or RESUME_KIT_OUT), check the page target, report overflow."""
     r = build(version, Path(out_dir) if out_dir else DEFAULT_OUT)
     result = {"version": version, "pages": r.pages, "target_pages": r.target, "ok": r.ok,
               "docx": str(r.docx), "pdf": str(r.pdf)}
@@ -58,6 +58,19 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
     if with_preview:
         result["preview_images"] = [str(p) for p in preview(r.pdf)]
     return result
+
+
+@server.tool()
+def draft_version(name: str, posting_text: str, title: str | None = None, parent: str | None = None,
+                  force: bool = False) -> dict:
+    """Draft a tailored version for a job posting: saves the posting, extends the closest existing version
+    (or `parent`), and picks and orders skill, bullet and open-source ids by relevance to the posting,
+    keeping the parent's counts so the page target holds. Headline and summary stay the parent's: rewrite
+    them from confirmed facts only, then check_facts, build_version and score_version."""
+    d = draft.draft(name, posting_text, title=title, parent=parent, force=force)
+    return {"version": name, "file": str(d.path), "extends": d.parent, "posting": str(d.posting),
+            "changes": {k: {"parent": a, "draft": b} for k, (a, b) in d.changed.items()},
+            "posting_terms_not_in_profile": d.missing_terms, "summary": d.summary()}
 
 
 @server.tool()

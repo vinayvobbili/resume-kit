@@ -153,3 +153,73 @@ def test_ats_helpers_are_valid_javascript(name, tmp_path):
     script.write_text(f"new Function({json.dumps(apply.ats_playbook('lever')['helpers'][name])});\n")
     run = subprocess.run(["node", str(script)], capture_output=True, text=True, check=False)
     assert run.returncode == 0, run.stderr
+
+
+SRE_POSTING = """Staff Detection Engineer. You will own detection-as-code: Sigma rules, unit tests and log replay in CI.
+Lead incident response and postmortems. Automate phishing triage with Python and SOAR. Splunk SPL a plus.
+Kubernetes experience; you will run detections on Kubernetes."""
+
+
+def test_draft_orders_confirmed_facts_by_relevance(content):
+    from resume_kit import draft
+
+    d = draft.draft("acme-staff", SRE_POSTING, title="Acme — Staff Detection Engineer", parent="base")
+    data = yaml.safe_load(d.path.read_text())
+    assert data["extends"] == "base" and data["posting"] == "postings/acme-staff.md"
+    assert data["output"] == "Alex_Rivera_Resume_Acme_Staff"
+    assert (content / "postings" / "acme-staff.md").read_text().startswith("Staff Detection Engineer")
+    # Detection first; the parent's counts are kept.
+    assert data["skills"][0] == "detection" and len(data["skills"]) == 4
+    assert data["roles"]["northwind"][0] == "detection_as_code"
+    assert data["roles"]["contoso"][0] == "phishing_automation"
+    assert len(data["roles"]["northwind"]) == 5
+    # Every id is from the profile, so the draft resolves and passes the guardrails as is.
+    spec = resolve("acme-staff")
+    assert facts.check(spec) == []
+    assert spec.headline == resolve("base").headline
+    # Terms the profile never mentions are reported (plurals folded, title words ignored).
+    assert "kubernetes" in d.missing_terms
+    assert not {"log", "postmortem", "splunk", "staff", "engineer"} & set(d.missing_terms)
+
+
+def test_draft_picks_the_closest_parent_and_respects_its_drops(content):
+    from resume_kit import draft
+
+    d = draft.draft("detect2", SRE_POSTING)
+    assert d.parent == "acme"
+    assert "iam_diff" not in yaml.safe_load(d.path.read_text()).get("open_source", [])
+
+
+def test_draft_refuses_to_overwrite_and_bad_names(content):
+    from resume_kit import draft
+
+    with pytest.raises(ContentError, match="exists"):
+        draft.draft("acme", SRE_POSTING)
+    with pytest.raises(ContentError, match="lowercase"):
+        draft.draft("Acme Staff", SRE_POSTING)
+    with pytest.raises(ContentError, match="empty"):
+        draft.draft("x", "  ")
+
+
+def test_draft_cli_reads_the_posting_from_stdin(content, monkeypatch, capsys):
+    import io
+
+    from resume_kit import cli
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(SRE_POSTING))
+    assert cli.main(["draft", "from-stdin", "-", "--from", "base"]) == 0
+    assert "Drafted" in capsys.readouterr().out
+    assert (content / "variants" / "from-stdin.yaml").exists()
+
+
+def test_draft_uses_one_wording_of_a_fact(content):
+    from resume_kit import draft
+
+    profile = (content / "profile.yaml").read_text()
+    longer = ("    phishing_automation_long: >-\n      Automated phishing triage with a Python and SOAR pipeline, "
+              "cutting median handling time from 25 to\n      6 minutes, with Splunk enrichment\n")
+    (content / "profile.yaml").write_text(profile.replace("    vuln_program: >-", longer + "    vuln_program: >-"))
+    d = draft.draft("phish", SRE_POSTING, parent="base")
+    contoso = yaml.safe_load(d.path.read_text())["roles"]["contoso"]
+    assert len({"phishing_automation", "phishing_automation_long"} & set(contoso)) == 1
+    assert len(contoso) == 3
