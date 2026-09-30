@@ -27,6 +27,7 @@ systems:
     quirks:
       - Upload the resume FIRST. Resume upload / autofill resets fields you already filled.
       - Yes/No button groups can look selected after a scripted click without registering. Use a real click (computer tool) and verify before submit.
+      - Text fields set with setNativeValue can show the value but stay empty to the form; Submit then reports "Missing entry for required field". Type text with real keystrokes (click the field, then type) instead of scripting it.
       - The success page confirms submission. Some employers cap applications per period; check before applying to several roles.
   lever:
     hosts: [jobs.lever.co, jobs.eu.lever.co]
