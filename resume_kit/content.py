@@ -5,7 +5,8 @@ A content directory holds profile.yaml (every fact, keyed by id), variants/<name
 
 A version may `extends:` another version and override any of: headline, summary,
 skills, roles (per role id), open_source, certs, certs_inline, pages.
-`drop:` removes ids from every list after overrides apply. What identifies one
+`drop:` removes ids from every list after overrides apply, and a role id there leaves
+that role off entirely; `undated:` lists role ids shown without dates. What identifies one
 application (title, output, posting, applied, notes) is never inherited: a version
 tailored from another is a different application, not a copy of the first.
 """
@@ -86,7 +87,7 @@ class Spec:
         out += [f"• {s}" for s in self.skills]
         out += ["", "PROFESSIONAL EXPERIENCE"]
         for r in self.roles:
-            out.append(f"{r['title']}  |  {r['org']}  —  {r['dates']}")
+            out.append(f"{r['title']}  |  {r['org']}" + (f"  —  {r['dates']}" if r["dates"] else ""))
             out += [f"• {b}" for b in r["bullets"]]
         if self.open_source:
             out += ["", self.open_source_heading.upper()]
@@ -145,7 +146,7 @@ def raw_version(name: str, content: Path | None = None) -> dict:
             raise ContentError(f"extends cycle: {' -> '.join(chain + [cur])}")
         chain.append(cur)
         cur = _read(variants / f"{cur}.yaml").get("extends")
-    merged: dict = {"roles": {}, "drop": []}
+    merged: dict = {"roles": {}, "drop": [], "undated": []}
     for n in reversed(chain):
         v = _read(variants / f"{n}.yaml")
         for k in SCALAR_KEYS + LIST_KEYS:
@@ -153,6 +154,7 @@ def raw_version(name: str, content: Path | None = None) -> dict:
                 merged[k] = v[k]
         merged["roles"].update(v.get("roles", {}))
         merged["drop"] += v.get("drop", [])
+        merged["undated"] += v.get("undated", [])
     own = _read(variants / f"{name}.yaml")
     merged.update({k: own[k] for k in OWN_KEYS if k in own})
     merged["version"] = name
@@ -178,11 +180,14 @@ def resolve(name: str, content: Path | None = None) -> Spec:
 
     roles = []
     for r in profile["roles"]:
+        if r["id"] in drop:
+            continue
         if r["id"] not in v["roles"]:
             raise ContentError(f"{name}: no bullet list for role {r['id']!r}")
-        roles.append({"title": r["title"], "org": r["org"], "dates": r["dates"],
+        roles.append({"title": r["title"], "org": r["org"],
+                      "dates": "" if r["id"] in v["undated"] else r["dates"],
                       "bullets": pick(v["roles"][r["id"]], r["bullets"], f"roles.{r['id']}")})
-    unknown_roles = set(v["roles"]) - {r["id"] for r in profile["roles"]}
+    unknown_roles = (set(v["roles"]) | set(v["undated"])) - {r["id"] for r in profile["roles"]}
     if unknown_roles:
         raise ContentError(f"{name}: unknown role id(s) {sorted(unknown_roles)}")
 

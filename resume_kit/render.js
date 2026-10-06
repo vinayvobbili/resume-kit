@@ -30,7 +30,7 @@ const role = (title, org, dates) => new Paragraph({
   children: [
     new TextRun({ text: title, bold: true }),
     new TextRun({ text: '  |  ' + org }),
-    new TextRun({ text: '\t' + dates, italics: true }),
+    ...(dates ? [new TextRun({ text: '\t' + dates, italics: true })] : []),
   ],
 });
 

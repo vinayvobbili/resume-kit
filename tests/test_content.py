@@ -49,6 +49,17 @@ def test_role_override_only_touches_that_role(content):
     assert spec.roles[0] == base.roles[0]
 
 
+def test_drop_can_leave_a_role_off_and_undated_hides_its_dates(content):
+    write_variant(content, "t", {"extends": "base", "output": "t", "drop": ["contoso"], "undated": ["northwind"]})
+    spec, base = resolve("t"), resolve("base")
+    assert [r["org"] for r in spec.roles] == [base.roles[0]["org"]]
+    assert spec.roles[0]["dates"] == "" and spec.roles[0]["bullets"] == base.roles[0]["bullets"]
+    assert f"{base.roles[0]['title']}  |  {base.roles[0]['org']}\n" in spec.text()
+    write_variant(content, "u", {"extends": "base", "output": "u", "undated": ["acme"]})
+    with pytest.raises(ContentError, match="unknown role id"):
+        resolve("u")
+
+
 def test_posting_and_pages_resolve_relative_to_content(content):
     write_variant(content, "t", {"extends": "base", "output": "t", "pages": 2,
                                  "posting": "postings/acme-detection-engineer.md"})

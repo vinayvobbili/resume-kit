@@ -63,7 +63,8 @@ summary: >-
 skills: [detection, cloud_security, engineering, appsec]
 roles:
   northwind: [detection_as_code, ir_lead, iam_guardrails, paved_road]   # only the roles you change
-drop: [iam_diff]                                                          # remove ids from any list
+drop: [iam_diff]                                                          # remove ids from any list (a role id drops the role)
+undated: [contoso]                                                        # show these roles without dates
 ```
 
 To start a tailored version from a job posting, let resume-kit draft it:
