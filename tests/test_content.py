@@ -144,6 +144,7 @@ def test_missing_answers_file_explains_itself():
     ("acme.taleo.net", "taleo"),
     ("acme.eightfold.ai", "eightfold"),
     ("https://www.linkedin.com/jobs/view/1", "linkedin"),
+    ("https://careers-acme.icims.com/jobs/1/job", "icims"),
 ])
 def test_ats_lookup_by_name_or_url(query, system):
     pb = apply.ats_playbook(query)
@@ -153,7 +154,7 @@ def test_ats_lookup_by_name_or_url(query, system):
 
 def test_unknown_ats():
     with pytest.raises(ContentError):
-        apply.ats_playbook("icims")
+        apply.ats_playbook("successfactors")
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="needs node")

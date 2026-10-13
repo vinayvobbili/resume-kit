@@ -67,6 +67,15 @@ systems:
     hosts: ["*.eightfold.ai"]
     quirks:
       - The job description renders client-side. Read it with the page-text tool, not a plain HTTP fetch.
+  icims:
+    hosts: ["*.icims.com"]
+    account: candidate creates an account or signs in (email, privacy consent, then a password or email code)
+    quirks:
+      - The form lives in a same-origin iframe ("iCIMS Content iFrame") that the accessibility tree doesn't expand. Reach fields with document.querySelector('iframe').contentDocument; loading the frame's URL as the top page just redirects back to the wrapper.
+      - The resume input (PortalProfileFields.Resume_File) is inside that iframe, out of reach of a file-upload tool. The candidate clicks Replace Resume, then My Computer, and picks the file. Upload first, since parsing can overwrite profile fields, then re-read every field.
+      - The candidate-profile page advances with its Update Profile button. Finish Later saves a partial application to come back to.
+      - The Submit button on the employer-questions page can be the FINAL submit even when the step bar shows more steps. Treat it as the final submit and have the candidate press it.
+      - Employer questions are plain selects with ids like Q39; set .value and dispatch a change event, then confirm the visible value.
 
 helpers:
   setNativeValue: |
