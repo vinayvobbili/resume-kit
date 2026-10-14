@@ -73,7 +73,7 @@ To start a tailored version from a job posting, let resume-kit draft it:
 resume draft acme-sre posting.md --title "Acme — Senior SRE"   # or: some-command | resume draft acme-sre -
 ```
 
-The draft extends the existing version that reads most like the posting and keeps its shape (how many skills, bullets and open-source items), so the page target holds. It picks and orders ids by how much of the posting's wording each fact shares, and uses only one wording of a fact when the profile keeps several. Nothing is reworded: the headline and summary stay the parent's until you tailor them, so the guardrails still hold. It also lists posting terms that no fact mentions: possible gaps, or just different wording.
+The draft extends the existing version that reads most like the posting and keeps its shape (how many skills, bullets and open-source items), so the page target holds. A version that leaves a role off or shows one without dates is never chosen on its own; pass `--from` to extend one anyway. It picks and orders ids by how much of the posting's wording each fact shares, uses only one wording of a fact when the profile keeps several, and never picks a fact that a forbidden guardrail matches (a retired project, say). Nothing is reworded: the headline and summary stay the parent's until you tailor them, so the guardrails still hold. It also lists posting terms that no fact mentions: possible gaps, or just different wording.
 
 ## CLI
 

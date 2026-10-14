@@ -64,13 +64,14 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
 def draft_version(name: str, posting_text: str, title: str | None = None, parent: str | None = None,
                   force: bool = False) -> dict:
     """Draft a tailored version for a job posting: saves the posting, extends the closest existing version
-    (or `parent`), and picks and orders skill, bullet and open-source ids by relevance to the posting,
-    keeping the parent's counts so the page target holds. Headline and summary stay the parent's: rewrite
-    them from confirmed facts only, then check_facts, build_version and score_version."""
+    (or `parent`; versions that leave a role off or undated are only extended when named), and picks and
+    orders skill, bullet and open-source ids by relevance to the posting, keeping the parent's counts so the
+    page target holds. Ids a forbidden guardrail matches are never picked. Headline and summary stay the
+    parent's: rewrite them from confirmed facts only, then check_facts, build_version and score_version."""
     d = draft.draft(name, posting_text, title=title, parent=parent, force=force)
     return {"version": name, "file": str(d.path), "extends": d.parent, "posting": str(d.posting),
             "changes": {k: {"parent": a, "draft": b} for k, (a, b) in d.changed.items()},
-            "posting_terms_not_in_profile": d.missing_terms, "summary": d.summary()}
+            "forbidden_ids": d.forbidden, "posting_terms_not_in_profile": d.missing_terms, "summary": d.summary()}
 
 
 @server.tool()

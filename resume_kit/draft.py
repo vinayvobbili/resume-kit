@@ -17,6 +17,7 @@ from pathlib import Path
 
 import yaml
 
+from . import facts as guardrails
 from .content import ContentError, content_dir, list_versions, load_profile, raw_version, resolve
 
 # A word block reads better than a 100-item list literal.
@@ -96,6 +97,7 @@ class Draft:
     posting: Path
     data: dict
     missing_terms: list[str] = field(default_factory=list)
+    forbidden: list[str] = field(default_factory=list)  # profile ids a guardrail rules out
     changed: dict[str, tuple[list, list]] = field(default_factory=dict)  # section -> (parent's, draft's)
 
     def summary(self) -> str:
@@ -106,6 +108,8 @@ class Draft:
             note = "reordered" if not (added or dropped) else ", ".join(
                 p for p in (f"added {added}" if added else "", f"dropped {dropped}" if dropped else "") if p)
             out.append(f"  {section}: {note}")
+        if self.forbidden:
+            out.append(f"  never picked, a guardrail forbids: {', '.join(self.forbidden)}")
         out.append("  headline and summary are the parent's: tailor them with confirmed facts only")
         if self.missing_terms:
             out.append(f"  posting terms no fact mentions (gaps, or different wording): {', '.join(self.missing_terms)}")
@@ -143,7 +147,12 @@ def draft(name: str, posting_text: str, title: str | None = None, parent: str | 
         def closeness(v: str) -> float:
             words = Counter(tokens(resolve(v, content).text()))
             return sum(min(c, post[t]) for t, c in words.items() if t in post) / math.sqrt(sum(words.values()) or 1)
-        parent = max(versions, key=closeness)
+        # A version that leaves a role off or undated was cut for one reader; only --from passes that on.
+        role_ids = {r["id"] for r in profile["roles"]}
+        def full_history(v: str) -> bool:
+            raw = raw_version(v, content)
+            return not (role_ids & set(raw["drop"]) or raw["undated"])
+        parent = max([v for v in versions if full_history(v)] or versions, key=closeness)
     elif parent not in versions:
         raise ContentError(f"unknown version {parent!r}")
     base = raw_version(parent, content)
@@ -157,7 +166,10 @@ def draft(name: str, posting_text: str, title: str | None = None, parent: str | 
     posting_path.write_text(posting_text.strip() + "\n", encoding="utf-8")
     data["posting"] = f"postings/{name}.md"
 
-    dropped = set(base.get("drop", []))  # inherited, so the draft can't use these ids
+    # A fact a guardrail forbids (retired, or corrected since) would fail `resume check`, so it's never picked.
+    rails = guardrails.load(content).forbidden
+    forbidden = [i for i, text in facts.items() if any(r.find(text) for r in rails)]
+    dropped = set(base.get("drop", [])) | set(forbidden)  # drops are inherited, so the draft can't use these ids
     used: list[str] = []  # everything picked so far, across sections
 
     def pick(section: str, current: list[str], pool: list[str]) -> list[str]:
@@ -197,4 +209,5 @@ def draft(name: str, posting_text: str, title: str | None = None, parent: str | 
     path.write_text(header + yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=110), encoding="utf-8")
     # The version's name and title usually name the company, which is never a gap.
     ignore = set(tokens(f"{name.replace('-', ' ')} {title or ''}"))
-    return Draft(name, parent, path, posting_path, data, rel.missing_terms(ignore=ignore), changed)
+    return Draft(name, parent, path, posting_path, data, missing_terms=rel.missing_terms(ignore=ignore),
+                 forbidden=forbidden, changed=changed)

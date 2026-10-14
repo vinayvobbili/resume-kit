@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("name", help="new version name, e.g. acme-sre")
     s.add_argument("posting", help="posting text file, or - to read it from stdin")
     s.add_argument("--title", help="version title (default: the name)")
-    s.add_argument("--from", dest="parent", help="version to extend (default: the one closest to the posting)")
+    s.add_argument("--from", dest="parent", help="version to extend (default: the closest one that shows every role, with dates)")
     s.add_argument("--output", help="output file stem")
     s.add_argument("--force", action="store_true", help="overwrite an existing version")
     s.set_defaults(fn=cmd_draft)

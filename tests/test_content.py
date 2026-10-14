@@ -211,6 +211,30 @@ def test_draft_picks_the_closest_parent_and_respects_its_drops(content):
     assert "iam_diff" not in yaml.safe_load(d.path.read_text()).get("open_source", [])
 
 
+@pytest.mark.parametrize("hides", [{"drop": ["iam_diff", "contoso"]}, {"undated": ["contoso"]}])
+def test_draft_never_picks_a_parent_that_hides_work_history(content, hides):
+    from resume_kit import draft
+
+    acme = yaml.safe_load((content / "variants" / "acme.yaml").read_text())
+    write_variant(content, "acme", {**acme, **hides})
+    assert draft.draft("detect3", SRE_POSTING).parent == "base"  # acme reads closer, but leaves a role short
+    assert draft.draft("detect4", SRE_POSTING, parent="acme").parent == "acme"  # still yours to choose
+
+
+def test_draft_skips_facts_a_guardrail_forbids(content):
+    from resume_kit import draft
+
+    rails = content / "guardrails.yaml"
+    rails.write_text(rails.read_text().replace("required:", (
+        "  - id: retired-replay\n    pattern: replay against 30 days\n"
+        "    why: The replay harness was retired.\n\nrequired:")))
+    d = draft.draft("no-replay", SRE_POSTING, parent="base")
+    northwind = yaml.safe_load(d.path.read_text())["roles"]["northwind"]
+    assert "detection_as_code" not in northwind and len(northwind) == 4  # the rest of the role, not a stand-in
+    assert d.forbidden == ["detection_as_code"] and "a guardrail forbids: detection_as_code" in d.summary()
+    assert facts.check(resolve("no-replay")) == []
+
+
 def test_draft_refuses_to_overwrite_and_bad_names(content):
     from resume_kit import draft
 
