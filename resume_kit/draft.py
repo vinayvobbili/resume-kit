@@ -147,11 +147,11 @@ def draft(name: str, posting_text: str, title: str | None = None, parent: str | 
         def closeness(v: str) -> float:
             words = Counter(tokens(resolve(v, content).text()))
             return sum(min(c, post[t]) for t, c in words.items() if t in post) / math.sqrt(sum(words.values()) or 1)
-        # A version that leaves a role off or undated was cut for one reader; only --from passes that on.
+        # A version that leaves a role off or anything undated was cut for one reader; only --from passes that on.
         role_ids = {r["id"] for r in profile["roles"]}
         def full_history(v: str) -> bool:
             raw = raw_version(v, content)
-            return not (role_ids & set(raw["drop"]) or raw["undated"])
+            return not (role_ids & set(raw["drop"]) or raw["undated"] or raw.get("undated_education"))
         parent = max([v for v in versions if full_history(v)] or versions, key=closeness)
     elif parent not in versions:
         raise ContentError(f"unknown version {parent!r}")

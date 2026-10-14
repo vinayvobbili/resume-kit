@@ -6,7 +6,9 @@ A content directory holds profile.yaml (every fact, keyed by id), variants/<name
 A version may `extends:` another version and override any of: headline, summary,
 skills, roles (per role id), open_source, certs, certs_inline, pages.
 `drop:` removes ids from every list after overrides apply, and a role id there leaves
-that role off entirely; `undated:` lists role ids shown without dates. What identifies one
+that role off entirely; `undated:` lists role ids shown without dates, and
+`undated_education: true` leaves the `dates` off every education entry (some employers ask
+U.S. applicants to remove graduation dates). What identifies one
 application (title, output, posting, applied, notes) is never inherited: a version
 tailored from another is a different application, not a copy of the first.
 """
@@ -25,7 +27,7 @@ USER_CONTENT = Path.home() / ".config" / "resume-kit" / "content"
 EXAMPLE_CONTENT = REPO / "examples" / "content"
 
 LIST_KEYS = ("skills", "open_source", "certs")
-SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages")
+SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education")
 OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
 
 
@@ -161,6 +163,16 @@ def raw_version(name: str, content: Path | None = None) -> dict:
     return merged
 
 
+def _education(entry: dict, undated: bool) -> dict:
+    """One education entry with its degree line composed: degree, then dates unless hidden, then GPA."""
+    degree = entry["degree"]
+    if entry.get("dates") and not undated:
+        degree += f", {entry['dates']}"
+    if entry.get("gpa"):
+        degree += f" (GPA {entry['gpa']})"
+    return {k: v for k, v in entry.items() if k not in ("dates", "gpa")} | {"degree": degree}
+
+
 def resolve(name: str, content: Path | None = None) -> Spec:
     content = content or content_dir()
     profile = load_profile(content)
@@ -203,7 +215,7 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         roles=roles,
         open_source_heading=profile["open_source"]["heading"],
         open_source=pick(v.get("open_source", []), profile["open_source"]["items"], "open_source"),
-        education=profile["education"],
+        education=[_education(e, bool(v.get("undated_education"))) for e in profile["education"]],
         certs=pick(v.get("certs", []), profile["certs"], "certs"),
         certs_inline=bool(v.get("certs_inline", False)),
         pages=int(v.get("pages", profile.get("pages", 2))),

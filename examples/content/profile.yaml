@@ -60,7 +60,8 @@ open_source:
     iam_diff: 'iam-diff: Shows the effective permission change of an IAM policy pull request before merge'
 education:
 - school: University of Colorado Boulder
-  degree: BS in Computer Science, 2017
+  degree: BS in Computer Science
+  dates: '2017'
 certs:
   aws_security: AWS Certified Security – Specialty
   gcih: GIAC Certified Incident Handler (GCIH)

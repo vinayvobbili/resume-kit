@@ -60,6 +60,25 @@ def test_drop_can_leave_a_role_off_and_undated_hides_its_dates(content):
         resolve("u")
 
 
+def test_undated_education_leaves_graduation_dates_off(content):
+    assert resolve("base").education[0]["degree"] == "BS in Computer Science, 2017"
+    write_variant(content, "t", {"extends": "base", "output": "t", "undated_education": True})
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})
+    for v in ("t", "t2"):
+        spec = resolve(v)
+        assert spec.education[0] == {"school": "University of Colorado Boulder", "degree": "BS in Computer Science"}
+        assert "2017" not in spec.text().split("EDUCATION")[1]
+
+
+def test_education_gpa_follows_the_dates(content):
+    profile = yaml.safe_load((content / "profile.yaml").read_text())
+    profile["education"][0]["gpa"] = "3.9"
+    (content / "profile.yaml").write_text(yaml.safe_dump(profile, allow_unicode=True))
+    assert resolve("base").education[0]["degree"] == "BS in Computer Science, 2017 (GPA 3.9)"
+    write_variant(content, "t", {"extends": "base", "output": "t", "undated_education": True})
+    assert resolve("t").education[0]["degree"] == "BS in Computer Science (GPA 3.9)"
+
+
 def test_posting_and_pages_resolve_relative_to_content(content):
     write_variant(content, "t", {"extends": "base", "output": "t", "pages": 2,
                                  "posting": "postings/acme-detection-engineer.md"})
