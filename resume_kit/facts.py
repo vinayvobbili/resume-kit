@@ -2,6 +2,8 @@
 
 Rules live in the content directory's guardrails.yaml, each with the reason it exists,
 so a failing check explains itself. `build` refuses to render a version that trips one.
+A rule with `since: YYYY-MM-DD` (a fact corrected that day) skips versions applied before
+then: they record what was sent, so they keep checking clean.
 """
 
 from __future__ import annotations
@@ -21,10 +23,14 @@ class Rule:
     pattern: str
     why: str
     case_sensitive: bool = False
+    since: str = ""
 
     def find(self, text: str) -> list[str]:
         flags = 0 if self.case_sensitive else re.IGNORECASE
         return [m.group(0) for m in re.finditer(self.pattern, text, flags=flags)]
+
+    def applies(self, applied: str = "") -> bool:
+        return not (self.since and applied and applied < self.since)
 
 
 @dataclass(frozen=True)
@@ -32,9 +38,12 @@ class Guardrails:
     forbidden: tuple[Rule, ...] = ()
     required: tuple[Rule, ...] = ()
 
-    def violations(self, text: str) -> list[str]:
-        problems = [f"{r.id}: found {r.find(text)[:3]} ({r.why})" for r in self.forbidden if r.find(text)]
-        problems += [f"{r.id}: missing ({r.why})" for r in self.required if not r.find(text)]
+    def violations(self, text: str, applied: str = "") -> list[str]:
+        """What `text` breaks; `applied` (YYYY-MM-DD) skips rules added after that version was sent."""
+        forbidden = [r for r in self.forbidden if r.applies(applied)]
+        required = [r for r in self.required if r.applies(applied)]
+        problems = [f"{r.id}: found {r.find(text)[:3]} ({r.why})" for r in forbidden if r.find(text)]
+        problems += [f"{r.id}: missing ({r.why})" for r in required if not r.find(text)]
         return problems
 
 
@@ -49,7 +58,8 @@ def load(content: Path | None = None) -> Guardrails:
         for r in data.get(key, []):
             try:
                 re.compile(r["pattern"])
-                out.append(Rule(r["id"], r["pattern"], r["why"], bool(r.get("case_sensitive", False))))
+                out.append(Rule(r["id"], r["pattern"], r["why"], bool(r.get("case_sensitive", False)),
+                                str(r.get("since", ""))))
             except (KeyError, re.error) as e:
                 raise ContentError(f"{path}: bad {key} rule {r.get('id', r)!r}: {e}") from None
         return tuple(out)
@@ -58,4 +68,4 @@ def load(content: Path | None = None) -> Guardrails:
 
 
 def check(spec: Spec, content: Path | None = None) -> list[str]:
-    return load(content).violations(spec.text())
+    return load(content).violations(spec.text(), str(spec.meta.get("applied", "")))

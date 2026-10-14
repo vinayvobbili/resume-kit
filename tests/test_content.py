@@ -116,6 +116,15 @@ def test_case_sensitive_rules(content):
     assert not rails.violations("years ago, then")
 
 
+def test_since_skips_versions_applied_before_the_correction(content):
+    (content / "guardrails.yaml").write_text(
+        "forbidden:\n  - {id: cissp, pattern: CISSP, why: not certified, since: 2026-10-13}\n")
+    rails = facts.load()
+    assert rails.violations("CISSP")  # not applied yet: the rule holds
+    assert rails.violations("CISSP", "2026-10-13")
+    assert not rails.violations("CISSP", "2026-10-01")  # sent before the fact was corrected
+
+
 def test_no_guardrails_file_means_no_rules(content):
     (content / "guardrails.yaml").unlink()
     assert facts.check(resolve("base")) == []
