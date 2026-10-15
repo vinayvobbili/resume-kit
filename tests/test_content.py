@@ -5,7 +5,7 @@ import subprocess
 import pytest
 import yaml
 
-from resume_kit import apply, facts
+from resume_kit import apply, cli, facts
 from resume_kit.content import ContentError, list_versions, load_profile, resolve
 
 
@@ -142,6 +142,18 @@ def test_since_skips_versions_applied_before_the_correction(content):
     assert rails.violations("CISSP")  # not applied yet: the rule holds
     assert rails.violations("CISSP", "2026-10-13")
     assert not rails.violations("CISSP", "2026-10-01")  # sent before the fact was corrected
+
+
+def test_a_version_sent_again_is_held_to_every_rule(content, capsys):
+    (content / "guardrails.yaml").write_text(
+        "forbidden:\n  - {id: cissp, pattern: CISSP, why: not certified, since: 2026-10-13}\n")
+    variant = content / "variants" / "base.yaml"
+    variant.write_text(variant.read_text().replace("Security engineer with", "CISSP security engineer with")
+                       + "applied: 2026-10-01\n")
+    assert facts.check(resolve("base")) == []  # the record of what was sent checks clean
+    assert facts.check(resolve("base"), reuse=True)[0].startswith("cissp: found ['CISSP']")
+    assert cli.main(["check", "base"]) == 0
+    assert cli.main(["check", "--reuse", "base"]) == 1 and "cissp" in capsys.readouterr().out
 
 
 def test_no_guardrails_file_means_no_rules(content):

@@ -43,6 +43,17 @@ def test_build_refuses_guardrail_violations(content, tmp_path):
         build("base", tmp_path)
 
 
+def test_a_version_sent_before_a_correction_builds_only_as_sent(content, tmp_path):
+    (content / "guardrails.yaml").write_text(
+        "forbidden:\n  - {id: cissp, pattern: CISSP, why: not certified, since: 2026-10-13}\n")
+    variant = content / "variants" / "base.yaml"
+    variant.write_text(variant.read_text().replace("Security engineer with", "CISSP security engineer with")
+                       + "applied: 2026-10-01\n")
+    with pytest.raises(build_mod.BuildError, match=r"(?s)cissp.*sent on 2026-10-01.*--as-sent"):
+        build("base", tmp_path)  # a copy to send again: the correction holds
+    assert build("base", tmp_path, as_sent=True).ok  # the record, re-rendered as it was sent
+
+
 def test_previews_stay_out_of_the_output_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(build_mod, "PREVIEWS", tmp_path / "previews")
     result = build("acme", tmp_path / "out")

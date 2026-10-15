@@ -91,11 +91,18 @@ def page_text(pdf: Path, first: int, last: int | None = None) -> str:
 
 
 def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
-          content: Path | None = None) -> BuildResult:
+          content: Path | None = None, as_sent: bool = False) -> BuildResult:
+    """Render a version. A build is a copy to send, so a version already applied with is held to every
+    guardrail, the ones added since it was sent too (see facts.check); `as_sent` re-renders it as it was sent,
+    without those."""
     content = content or content_dir()
     spec = resolve(version, content)
-    if enforce_facts and (problems := facts.check(spec, content)):
-        raise BuildError(f"{version} fails fact checks:\n  " + "\n  ".join(problems))
+    if enforce_facts and (problems := facts.check(spec, content, reuse=not as_sent)):
+        applied = spec.meta.get("applied")
+        why = (f"\n{version} was sent on {applied}, before these rules: a copy to send again must pass them. "
+               "Fix it (and set applied: to the new day), draft a new version, or re-render it as it was sent "
+               "(--as-sent)." if applied and not as_sent and not facts.check(spec, content) else "")
+        raise BuildError(f"{version} fails fact checks:\n  " + "\n  ".join(problems) + why)
     out_dir.mkdir(parents=True, exist_ok=True)
     docx = out_dir / f"{spec.output}.docx"
     render_docx(spec, docx)

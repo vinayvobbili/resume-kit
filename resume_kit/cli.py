@@ -39,7 +39,7 @@ def cmd_diff(args) -> int:
 def cmd_check(args) -> int:
     failed = 0
     for name in args.versions or list_versions():
-        problems = facts.check(resolve(name))
+        problems = facts.check(resolve(name), reuse=args.reuse)
         failed += bool(problems)
         print(f"{name}: " + ("ok" if not problems else "\n  " + "\n  ".join(problems)))
     return 1 if failed else 0
@@ -52,7 +52,12 @@ def cmd_build(args) -> int:
         return 2
     bad = 0
     for name in names:
-        result = build(name, Path(args.out))
+        try:
+            result = build(name, Path(args.out), as_sent=args.as_sent)
+        except BuildError as e:  # one version that can't be sent again doesn't stop the rest of --all
+            print(f"error: {e}", file=sys.stderr)
+            bad += 1
+            continue
         print(result.summary())
         bad += not result.ok
         if args.preview:
@@ -108,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("check", help="run fact guardrails (default: every version)")
     s.add_argument("versions", nargs="*")
+    s.add_argument("--reuse", action="store_true",
+                   help="check versions already applied with against every rule, as `build` does before sending again")
     s.set_defaults(fn=cmd_check)
 
     s = sub.add_parser("build", help="render .docx + .pdf and check the page target")
@@ -115,6 +122,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--all", action="store_true")
     s.add_argument("--out", default=str(DEFAULT_OUT), help=f"output directory (default {DEFAULT_OUT})")
     s.add_argument("--preview", action="store_true", help="also write page JPEGs")
+    s.add_argument("--as-sent", action="store_true",
+                   help="re-render a version already applied with as it was sent, without guardrails added since "
+                        "(not a copy to send again)")
     s.set_defaults(fn=cmd_build)
 
     s = sub.add_parser("draft", help="draft a tailored version from a job posting (facts ordered by relevance)")

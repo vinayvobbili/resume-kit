@@ -41,16 +41,21 @@ def show_version(version: str) -> str:
 
 
 @server.tool()
-def check_facts(version: str | None = None) -> dict:
-    """Run the fact guardrails (forbidden claims, required facts) on one version or all of them."""
+def check_facts(version: str | None = None, reuse: bool = False) -> dict:
+    """Run the fact guardrails (forbidden claims, required facts) on one version or all of them. A version
+    already applied with skips rules added after it was sent; reuse: check it as a copy to send again, against
+    every rule (what build_version holds it to)."""
     names = [version] if version else _list_versions()
-    return {n: facts.check(resolve(n)) or "ok" for n in names}
+    return {n: facts.check(resolve(n), reuse=reuse) or "ok" for n in names}
 
 
 @server.tool()
-def build_version(version: str, out_dir: str | None = None, with_preview: bool = False) -> dict:
-    """Render .docx and .pdf (default ~/Downloads or RESUME_KIT_OUT), check the page target, report overflow."""
-    r = build(version, Path(out_dir) if out_dir else DEFAULT_OUT)
+def build_version(version: str, out_dir: str | None = None, with_preview: bool = False,
+                  as_sent: bool = False) -> dict:
+    """Render .docx and .pdf (default ~/Downloads or RESUME_KIT_OUT), check the page target, report overflow.
+    A build is a copy to send: a version already applied with must pass every guardrail, the ones added since it
+    was sent too. as_sent: re-render it as it was sent instead (not to send again)."""
+    r = build(version, Path(out_dir) if out_dir else DEFAULT_OUT, as_sent=as_sent)
     result = {"version": version, "pages": r.pages, "target_pages": r.target, "ok": r.ok,
               "docx": str(r.docx), "pdf": str(r.pdf)}
     if r.overflow:

@@ -11,7 +11,7 @@ All of this is also available as an MCP server, so an AI assistant can tailor, b
 Tailoring a resume for every job tends to produce a dozen near-copies that drift apart. A number gets corrected in one copy but not the others. A claim you walked back reappears. Page 3 appears without anyone noticing. With resume-kit:
 
 - **Each fact lives in one place.** Versions refer to facts by id and never restate them, so a correction reaches every version.
-- **Guardrails fail the build.** `guardrails.yaml` lists claims that must never appear (with the reason) and facts that must. They're checked on every build, which also makes it safe to let an AI assistant write versions. When you correct a fact, give its rule `since: <date>`: versions you applied with before then keep checking clean, since they record what you sent.
+- **Guardrails fail the build.** `guardrails.yaml` lists claims that must never appear (with the reason) and facts that must. They're checked on every build, which also makes it safe to let an AI assistant write versions. When you correct a fact, give its rule `since: <date>`: versions you applied with before then keep checking clean, since they record what you sent. Building one is a copy to send again, so `build` holds it to every rule (`resume check --reuse` shows what it would trip); `build --as-sent` re-renders the record as it was sent.
 - **The page count is checked.** The build fails unless the PDF hits its target, and it prints the text that spilled over, so you know what to trim.
 - **Gaps get sorted.** `resume score` lists the must-haves a posting asks for that the resume doesn't show. A gap that matches a guardrail is labeled as a real gap, not a wording problem to paper over.
 

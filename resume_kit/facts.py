@@ -3,7 +3,9 @@
 Rules live in the content directory's guardrails.yaml, each with the reason it exists,
 so a failing check explains itself. `build` refuses to render a version that trips one.
 A rule with `since: YYYY-MM-DD` (a fact corrected that day) skips versions applied before
-then: they record what was sent, so they keep checking clean.
+then: they record what was sent, so they keep checking clean. Building one is another matter:
+a build is a copy about to be sent, so it's held to every rule (`reuse`), unless it's asked
+to re-render the record as it was sent.
 """
 
 from __future__ import annotations
@@ -67,5 +69,7 @@ def load(content: Path | None = None) -> Guardrails:
     return Guardrails(rules("forbidden"), rules("required"))
 
 
-def check(spec: Spec, content: Path | None = None) -> list[str]:
-    return load(content).violations(spec.text(), str(spec.meta.get("applied", "")))
+def check(spec: Spec, content: Path | None = None, reuse: bool = False) -> list[str]:
+    """What a version breaks. A version already applied with skips rules added after it was sent, unless
+    `reuse`: it's about to be sent again, so every rule holds."""
+    return load(content).violations(spec.text(), "" if reuse else str(spec.meta.get("applied", "")))
