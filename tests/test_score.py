@@ -49,6 +49,27 @@ def fake_shortlist(tmp_path, monkeypatch):
     return argv_file
 
 
+def test_claude_takes_the_api_key_from_the_keychain_item_only_for_shortlist(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        return type("R", (), {"returncode": 0 if cmd[3] == "anthropic" else 44,
+                              "stdout": "sk-test\n" if cmd[3] == "anthropic" else ""})()
+
+    monkeypatch.setattr(score.subprocess, "run", fake_run)
+    assert score.claude_env("anthropic")["ANTHROPIC_API_KEY"] == "sk-test"
+    assert calls == [["security", "find-generic-password", "-s", "anthropic", "-w"]]
+    with pytest.raises(score.ScoreError, match="no API key in the keychain item 'other'"):
+        score.claude_env("other")
+    with pytest.raises(score.ScoreError, match="--keychain"):
+        score.claude_env("")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-set")
+    assert score.claude_env("anthropic")["ANTHROPIC_API_KEY"] == "sk-set" and len(calls) == 2
+
+
 def test_scores_against_the_versions_own_posting(fake_shortlist, example_content):
     data = score.score("acme")
     argv = json.loads(fake_shortlist.read_text())
@@ -69,7 +90,8 @@ def test_gaps_matching_a_guardrail_are_labeled_real(fake_shortlist):
     assert "❌ kubernetes (must-have)" in text
 
 
-def test_explicit_postings_override(fake_shortlist, tmp_path):
+def test_explicit_postings_override(fake_shortlist, tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     posting = tmp_path / "other.md"
     posting.write_text("# Other job")
     score.score("base", [posting], backend="claude")

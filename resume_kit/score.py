@@ -38,8 +38,28 @@ def find_shortlist() -> str:
     return exe
 
 
+def claude_env(keychain: str = "") -> dict[str, str]:
+    """The environment for shortlist's Claude backend: ANTHROPIC_API_KEY as set, or from the macOS keychain item
+    named `keychain` (only into shortlist's environment; never printed or logged)."""
+    env = dict(os.environ)
+    if env.get("ANTHROPIC_API_KEY") or env.get("ANTHROPIC_AUTH_TOKEN"):
+        return env
+    if not keychain:
+        raise ScoreError("the claude backend needs ANTHROPIC_API_KEY, or --keychain naming the macOS keychain item "
+                         "that holds it")
+    try:
+        r = subprocess.run(["security", "find-generic-password", "-s", keychain, "-w"], capture_output=True,
+                           text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise ScoreError(f"couldn't read the keychain item {keychain!r}: {type(e).__name__}") from None
+    if r.returncode or not r.stdout.strip():
+        raise ScoreError(f"no API key in the keychain item {keychain!r}: add one with "
+                         f"`security add-generic-password -s {keychain} -a \"$USER\" -w`")
+    return env | {"ANTHROPIC_API_KEY": r.stdout.strip()}
+
+
 def score(version: str, postings: list[Path] | None = None, backend: str = "local",
-          content: Path | None = None) -> dict:
+          content: Path | None = None, keychain: str = "") -> dict:
     content = content or content_dir()
     spec = resolve(version, content)
     postings = [Path(p).expanduser().resolve() for p in postings] if postings else []
@@ -51,12 +71,13 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
         if not p.exists():
             raise ContentError(f"posting not found: {p}")
 
+    env = claude_env(keychain) if backend == "claude" else None
     CACHE.mkdir(parents=True, exist_ok=True)
     built = build(version, CACHE / "builds", content=content)
     # cwd=CACHE so shortlist's .shortlist-cache/ lands there and reruns reuse extractions.
     proc = subprocess.run([find_shortlist(), "jobs", str(built.pdf), *map(str, postings),
                            "--format", "json", "--backend", backend],
-                          cwd=CACHE, capture_output=True, text=True, check=False)
+                          cwd=CACHE, capture_output=True, text=True, check=False, env=env)
     if proc.returncode:
         raise ScoreError(f"shortlist failed ({proc.returncode}):\n{proc.stderr.strip()[-2000:]}")
     try:

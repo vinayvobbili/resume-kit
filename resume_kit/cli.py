@@ -90,7 +90,7 @@ def cmd_draft(args) -> int:
 
 
 def cmd_score(args) -> int:
-    data = score.score(args.version, [Path(p) for p in args.postings], backend=args.backend)
+    data = score.score(args.version, [Path(p) for p in args.postings], backend=args.backend, keychain=args.keychain)
     print(json.dumps(data, indent=2, ensure_ascii=False) if args.json else score.to_text(data), end="")
     return 1 if data.get("errors") else 0
 
@@ -161,8 +161,12 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("score", help="score a version against job postings with shortlist-ai")
     s.add_argument("version")
     s.add_argument("postings", nargs="*", help="posting files (.md/.txt/.pdf/.docx); default: the version's `posting:`")
-    s.add_argument("--backend", choices=["local", "claude"], default="local",
-                   help="local keeps the resume on this machine (default); claude needs ANTHROPIC_API_KEY")
+    s.add_argument("--backend", choices=["local", "claude"], default=os.environ.get("RESUME_KIT_BACKEND", "local"),
+                   help="local keeps the resume on this machine (default, or $RESUME_KIT_BACKEND); claude needs "
+                        "ANTHROPIC_API_KEY or --keychain")
+    s.add_argument("--keychain", default=os.environ.get("RESUME_KIT_KEYCHAIN", ""),
+                   help="macOS keychain item holding the Anthropic API key, when ANTHROPIC_API_KEY isn't set "
+                        "(default $RESUME_KIT_KEYCHAIN)")
     s.add_argument("--json", action="store_true", help="print shortlist's full JSON")
     s.set_defaults(fn=cmd_score)
 
