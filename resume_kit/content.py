@@ -135,6 +135,25 @@ def load_profile(content: Path | None = None) -> dict:
     return profile
 
 
+def library(content: Path | None = None) -> list[tuple[str, str, dict[str, str]]]:
+    """Every fact a version can pick, by section: (section key as a version names it, heading, {id: text})."""
+    profile = load_profile(content)
+    return [("skills", "Skills", profile["skills"]),
+            *((f"roles.{r['id']}", f"{r['title']}, {r['org']} ({r['dates']})", r["bullets"])
+              for r in profile["roles"]),
+            ("open_source", profile["open_source"]["heading"], profile["open_source"]["items"]),
+            ("certs", "Certifications", profile["certs"])]
+
+
+def picked(version: str, content: Path | None = None) -> dict[str, list[str]]:
+    """The ids a version picks in each section of library(), in its order (drops left out)."""
+    v = raw_version(version, content)
+    drop = set(v["drop"])
+    out = {"skills": v.get("skills", []), "open_source": v.get("open_source", []), "certs": v.get("certs", []),
+           **{f"roles.{r}": ids for r, ids in v["roles"].items()}}
+    return {k: [i for i in ids if i not in drop] for k, ids in out.items()}
+
+
 def list_versions(content: Path | None = None) -> list[str]:
     return sorted(p.stem for p in ((content or content_dir()) / "variants").glob("*.yaml"))
 

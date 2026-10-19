@@ -82,6 +82,7 @@ The draft extends the existing version that reads most like the posting and keep
 resume list                         # versions, the content dir in use, and applied dates
 resume show acme                    # plain text of a version
 resume diff base acme               # what a version changes
+resume facts northwind --version acme  # every fact id in a section, acme's picks numbered in order
 resume draft acme-sre posting.md    # draft a tailored version from a posting
 resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews

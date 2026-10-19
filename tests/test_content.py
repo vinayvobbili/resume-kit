@@ -17,6 +17,18 @@ def test_example_versions():
     assert list_versions() == ["acme", "base"]
 
 
+def test_facts_lists_every_id_and_numbers_a_versions_picks(capsys):
+    assert cli.main(["facts", "northwind", "--version", "acme", "--width", "40"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("roles.northwind: Senior Security Engineer, Northwind Traders")
+    assert any(line.startswith("   1 detection_as_code: Moved 300+") and line.endswith("…") for line in out)
+    assert any(line.startswith("   3 iam_guardrails: ") for line in out)
+    assert any(line.startswith("   - ") for line in out)  # a fact acme leaves out
+    assert cli.main(["facts"]) == 0
+    assert {line.split(":")[0] for line in capsys.readouterr().out.splitlines() if not line.startswith(" ")} \
+        >= {"skills", "roles.northwind", "open_source", "certs"}
+
+
 @pytest.mark.parametrize("version", ["base", "acme"])
 def test_example_versions_resolve_and_pass_guardrails(version):
     spec = resolve(version)

@@ -13,7 +13,7 @@ import yaml
 
 from . import apply, draft, facts, score
 from .build import DEFAULT_OUT, BuildError, build, preview
-from .content import ContentError, content_dir, list_versions, raw_version, resolve
+from .content import ContentError, content_dir, library, list_versions, picked, raw_version, resolve
 
 
 def cmd_list(args) -> int:
@@ -27,6 +27,22 @@ def cmd_list(args) -> int:
 
 def cmd_show(args) -> int:
     print(resolve(args.version).text(), end="")
+    return 0
+
+
+def cmd_facts(args) -> int:
+    chosen = picked(args.version) if args.version else {}
+    for key, heading, items in library():
+        if args.section and args.section not in (key, key.removeprefix("roles.")):
+            continue
+        print(f"{key}: {heading}")
+        order = chosen.get(key, [])
+        for i, text in items.items():
+            mark = f"{order.index(i) + 1:>2}" if i in order else ("  " if not args.version else " -")
+            text = " ".join(str(text).split())
+            if args.width and len(text) > args.width:
+                text = text[:args.width - 1] + "…"
+            print(f"  {mark} {i}: {text}")
     return 0
 
 
@@ -105,6 +121,12 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("show", help="print a version as plain text")
     s.add_argument("version")
     s.set_defaults(fn=cmd_show)
+
+    s = sub.add_parser("facts", help="every fact a version can pick, by id; with --version, its picks in order")
+    s.add_argument("section", nargs="?", help="one section: skills, a role id, open_source or certs")
+    s.add_argument("--version", help="number the facts this version picks, in its order; - marks the rest")
+    s.add_argument("--width", type=int, default=0, help="cut each fact's text to this many characters")
+    s.set_defaults(fn=cmd_facts)
 
     s = sub.add_parser("diff", help="compare two versions line by line")
     s.add_argument("a")
