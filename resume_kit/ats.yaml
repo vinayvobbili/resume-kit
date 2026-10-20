@@ -88,6 +88,19 @@ systems:
       - The resume is a select of files stored from earlier applications plus "Upload a new file". Upload the tailored PDF to the file input and confirm the select shows "Upload a new file" with that name.
       - The skills chips come from earlier resumes; leave them unless one is wrong.
       - The Application Accuracy Statement checkbox is the candidate's attestation. They tick it, then Continue moves to the job-specific questions. Save as draft keeps a partial application.
+  smartrecruiters:
+    hosts: [jobs.smartrecruiters.com, careers.smartrecruiters.com]
+    account: none needed (one-click "Easy apply" form)
+    job_api: https://api.smartrecruiters.com/v1/companies/<company>/postings/<posting-id>
+    steps: [Profile (personal info, experience, resume, message), Preliminary questions]
+    quirks:
+      - Every field sits in shadow DOM (spl-* components), so the accessibility tree and plain querySelector see almost nothing. Read fields with the shadowFields helper; fill them with real clicks and typing, since setNativeValue on these inputs throws "Illegal invocation".
+      - The resume input is inside the SPL-DROPZONE shadow root; a file-upload tool doesn't register there, even after moving the input. The candidate clicks "Choose a file" in the Resume box and picks the tailored PDF. Uploading it parses the resume into the Experience and Education cards; check them.
+      - Parsing sets City from the resume's location line (e.g. "Durham"). Retype the candidate's own city. "Confirm your email" starts empty and is required.
+      - The "Message to the Hiring Team" box is optional free text; keep a copy of what goes in it.
+      - Preliminary questions mix Yes/No radios and searchable dropdowns. Click the dropdown, then click the option in the list that opens; take a screenshot before each pick, because the list's options move the fields below.
+      - The posting's location is its hiring office with remote=true; "Remote, <city>, CALIFORNIA" alone doesn't mean remote only in that state. Look for a state limit in the posting text.
+      - The last page has an electronic signature (name and today's date) and a privacy-notice declaration checkbox, both the candidate's. Submit is on that page.
 
 helpers:
   setNativeValue: |
@@ -143,6 +156,22 @@ helpers:
         ? !document.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`)
         : !el.value)
       .map(el => `${el.tagName.toLowerCase()} ${el.name || el.id} (${el.labels?.[0]?.innerText.trim() || el.getAttribute('aria-label') || ''})`);
+  shadowFields: |
+    // Forms built from web components (SmartRecruiters): list every input, textarea and select,
+    // inside shadow roots too, with its id (or label) and current value; file inputs show the file name.
+    (() => {
+      const out = [];
+      const walk = root => root.querySelectorAll('*').forEach(el => {
+        if (el.shadowRoot) walk(el.shadowRoot);
+        if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.type === 'hidden') return;
+        const name = el.id || el.name || el.getAttribute('aria-label') || el.placeholder || '';
+        const value = el.type === 'file' ? ([...(el.files || [])].map(f => f.name).join(', ') || '(empty)')
+          : (el.type === 'radio' || el.type === 'checkbox') ? (el.checked ? 'checked' : 'unchecked') : el.value;
+        out.push(`${el.tagName.toLowerCase()} ${el.type || ''} ${name}: ${String(value).slice(0, 80)}`);
+      });
+      walk(document);
+      return out.join('\n');
+    })()
   fileInputs: |
     // Where the resume goes: list file inputs and what (if anything) is attached.
     [...document.querySelectorAll('input[type=file]')].map(el => `${el.name || el.id}: ${[...el.files].map(f => f.name).join(', ') || '(empty)'}`);

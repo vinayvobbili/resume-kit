@@ -198,6 +198,7 @@ def test_missing_answers_file_explains_itself():
     ("https://www.linkedin.com/jobs/view/1", "linkedin"),
     ("https://careers-acme.icims.com/jobs/1/job", "icims"),
     ("https://acme.avature.net/careers/JobDetail/1", "avature"),
+    ("https://jobs.smartrecruiters.com/Acme/744000000000000-engineer", "smartrecruiters"),
 ])
 def test_ats_lookup_by_name_or_url(query, system):
     pb = apply.ats_playbook(query)
