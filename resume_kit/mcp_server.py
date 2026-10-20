@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from . import apply, draft, facts, score
 from .build import DEFAULT_OUT, build, preview
-from .content import content_dir, raw_version, resolve
+from .content import ContentError, content_dir, raw_version, resolve
 from .content import list_versions as _list_versions
 
 server = MCPServer(
@@ -97,8 +98,11 @@ def application_answers(section: str | None = None) -> dict:
 @server.tool()
 def ats_playbook(system: str) -> dict:
     """Quirks, shared rules, and JavaScript helpers for an applicant tracking system
-    (greenhouse, ashby, taleo, workday, linkedin, eightfold) or a job-page host."""
-    return apply.ats_playbook(system)
+    (greenhouse, ashby, lever, taleo, workday, linkedin, eightfold, icims, avature) or a job-page host."""
+    try:
+        return apply.ats_playbook(system)
+    except ContentError as e:
+        raise ToolError(str(e)) from e  # an unexpected error reaches the client as a bare "Error executing tool"
 
 
 def main() -> None:

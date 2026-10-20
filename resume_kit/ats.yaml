@@ -76,6 +76,18 @@ systems:
       - The candidate-profile page advances with its Update Profile button. Finish Later saves a partial application to come back to.
       - The Submit button on the employer-questions page can be the FINAL submit even when the step bar shows more steps. Treat it as the final submit and have the candidate press it.
       - Employer questions are plain selects with ids like Q39; set .value and dispatch a change event, then confirm the visible value.
+  avature:
+    hosts: ["*.avature.net"]
+    account: candidate signs in (many employers host it on their own careers domain)
+    steps: [Select your resume, Personal info, Job specific questions]
+    quirks:
+      - A second application prefills from the last one. Re-read every field. Work history can come back short (missing roles, a title cut off, a wrong end date).
+      - In each work-history entry, "Is current position?" is a native select. The End date input only appears after it is set to No, so set the select, wait, then fill the date.
+      - Dates are <input type=month> fields that take YYYY-MM through setNativeValue.
+      - Add Another appends a blank entry at the end of its section. Fill the new entries in order.
+      - The resume is a select of files stored from earlier applications plus "Upload a new file". Upload the tailored PDF to the file input and confirm the select shows "Upload a new file" with that name.
+      - The skills chips come from earlier resumes; leave them unless one is wrong.
+      - The Application Accuracy Statement checkbox is the candidate's attestation. They tick it, then Continue moves to the job-specific questions. Save as draft keeps a partial application.
 
 helpers:
   setNativeValue: |

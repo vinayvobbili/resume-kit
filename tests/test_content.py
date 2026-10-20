@@ -197,6 +197,7 @@ def test_missing_answers_file_explains_itself():
     ("acme.eightfold.ai", "eightfold"),
     ("https://www.linkedin.com/jobs/view/1", "linkedin"),
     ("https://careers-acme.icims.com/jobs/1/job", "icims"),
+    ("https://acme.avature.net/careers/JobDetail/1", "avature"),
 ])
 def test_ats_lookup_by_name_or_url(query, system):
     pb = apply.ats_playbook(query)

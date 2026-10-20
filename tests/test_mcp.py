@@ -33,3 +33,13 @@ def test_show_version_is_plain_text():
 
 def test_ats_playbook():
     assert call("ats_playbook", {"system": "taleo"})["system"] == "taleo"
+
+
+def test_an_unknown_ats_says_which_ones_are_known():
+    """Not a bare "Error executing tool": the assistant needs the list to pick a name or a host."""
+    try:
+        result = asyncio.run(server.call_tool("ats_playbook", {"system": "successfactors"}))
+        text = result.content[0].text
+    except Exception as e:  # the server can raise the ToolError rather than return it as a result
+        text = str(e)
+    assert "unknown ATS 'successfactors'" in text and "greenhouse" in text
