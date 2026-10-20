@@ -13,6 +13,10 @@ contact:
 - +1 (555) 010-0199
 - Denver, CO (Remote)
 - github.com/alex-rivera-example
+# Facts only a summary uses, never rendered as a section of their own: `resume trace` backs summary claims with
+# these as well as with the bullets and skills.
+about:
+  years: 8 years in security operations and cloud security
 skills:
   cloud_security: 'Cloud Security: AWS IAM and SCPs, GuardDuty, Security Hub, KMS, VPC design, CloudTrail analytics'
   detection: 'Detection & Response: Sigma, Splunk SPL, detection-as-code with CI tests, incident handling, threat hunting'

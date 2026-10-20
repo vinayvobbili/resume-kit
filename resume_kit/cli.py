@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from . import apply, draft, facts, score
+from . import apply, draft, facts, score, trace
 from .build import DEFAULT_OUT, BuildError, build, preview
 from .content import ContentError, content_dir, library, list_versions, picked, raw_version, resolve
 
@@ -44,6 +44,21 @@ def cmd_facts(args) -> int:
                 text = text[:args.width - 1] + "…"
             print(f"  {mark} {i}: {text}")
     return 0
+
+
+def cmd_trace(args) -> int:
+    flagged = 0
+    for name in args.versions:
+        rows = trace.trace(resolve(name), least=args.least)
+        hits = [r for r in rows if r.flagged]
+        flagged += len(hits)
+        print(f"{name}: {len(rows)} claims, {len(hits)} flagged")
+        for r in hits if args.flagged else rows:
+            mark = "!!" if r.flagged else "ok"
+            print(f"  {mark} {r.covered:4.0%} [{r.where}] {r.claim}")
+            print(f"       backed by: {', '.join(r.best) or 'nothing'}"
+                  + (f"; in no fact: {', '.join(r.unbacked)}" if r.unbacked else ""))
+    return 1 if flagged else 0
 
 
 def cmd_diff(args) -> int:
@@ -127,6 +142,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--version", help="number the facts this version picks, in its order; - marks the rest")
     s.add_argument("--width", type=int, default=0, help="cut each fact's text to this many characters")
     s.set_defaults(fn=cmd_facts)
+
+    s = sub.add_parser("trace", help="each claim in a version's headline and summary, with the fact that backs it; "
+                       "flags claims no fact backs (exit 1 if any)")
+    s.add_argument("versions", nargs="+")
+    s.add_argument("--least", type=float, default=0.5, help="flag a claim when no one fact has this share of its "
+                   "words (default 0.5)")
+    s.add_argument("--flagged", action="store_true", help="list only the flagged claims")
+    s.set_defaults(fn=cmd_trace)
 
     s = sub.add_parser("diff", help="compare two versions line by line")
     s.add_argument("a")

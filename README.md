@@ -83,6 +83,7 @@ resume list                         # versions, the content dir in use, and appl
 resume show acme                    # plain text of a version
 resume diff base acme               # what a version changes
 resume facts northwind --version acme  # every fact id in a section, acme's picks numbered in order
+resume trace acme                   # each headline and summary claim with the facts behind it; flags unbacked ones
 resume draft acme-sre posting.md    # draft a tailored version from a posting
 resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews

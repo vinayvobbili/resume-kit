@@ -311,3 +311,22 @@ def test_draft_uses_one_wording_of_a_fact(content):
     contoso = yaml.safe_load(d.path.read_text())["roles"]["contoso"]
     assert len({"phishing_automation", "phishing_automation_long"} & set(contoso)) == 1
     assert len(contoso) == 3
+
+
+def test_trace_backs_each_summary_claim_with_facts(capsys):
+    assert cli.main(["trace", "base", "acme"]) == 0
+    out = capsys.readouterr().out
+    assert "base: 5 claims, 0 flagged" in out and "backed by: about.years" in out
+
+
+def test_trace_flags_a_claim_no_fact_backs(content, capsys):
+    """A claim nobody wrote a guardrail for still shows: the words and numbers no fact has."""
+    path = content / "variants" / "acme.yaml"
+    path.write_text(path.read_text().replace(
+        "and led incident\n  response for credential-stuffing and leaked-key events.",
+        "and led incident\n  response for credential-stuffing and leaked-key events. Stayed with each team until "
+        "the tool was in daily use by 500+ engineers."))
+    assert cli.main(["trace", "acme", "--flagged"]) == 1
+    out = capsys.readouterr().out
+    assert "acme: 5 claims, 1 flagged" in out
+    assert "!!" in out and "Stayed with each team" in out and "500+" in out and "daily" in out
