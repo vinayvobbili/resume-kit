@@ -330,3 +330,20 @@ def test_trace_flags_a_claim_no_fact_backs(content, capsys):
     out = capsys.readouterr().out
     assert "acme: 5 claims, 1 flagged" in out
     assert "!!" in out and "Stayed with each team" in out and "500+" in out and "daily" in out
+
+
+def test_trace_text_checks_a_letter_but_not_its_greeting_or_signature(tmp_path, capsys):
+    letter = tmp_path / "letter.md"
+    letter.write_text(
+        "Dear Acme hiring team,\n\n"
+        "I automated phishing triage with a Python and SOAR pipeline, cutting median handling time from 25 to 6 "
+        "minutes. sigma-lint, my Sigma rule linter, runs in CI for detection teams. I also managed a team of 40 "
+        "engineers at a hospital.\n\n"
+        "Thank you for your time.\n\n"
+        "Alex Rivera\nalex.rivera@example.com · +1 (555) 010-0199\n")
+    assert cli.main(["trace", "--text", str(letter)]) == 1
+    out = capsys.readouterr().out
+    assert f"{letter}: 3 claims, 1 flagged" in out
+    assert "[letter] sigma-lint, my Sigma rule linter" in out
+    assert "ok" in out and "!!" in out and "40" in out and "hospital" in out
+    assert "Dear" not in out and "Thank you" not in out and "555" not in out

@@ -47,9 +47,13 @@ def cmd_facts(args) -> int:
 
 
 def cmd_trace(args) -> int:
+    if not args.versions and not args.text:
+        sys.exit("resume trace: name a version, or pass --text FILE")
     flagged = 0
-    for name in args.versions:
-        rows = trace.trace(resolve(name), least=args.least)
+    runs = [(name, lambda n=name: trace.trace(resolve(n), least=args.least)) for name in args.versions]
+    runs += [(str(p), lambda p=p: trace.trace_text(Path(p).read_text(), least=args.least)) for p in args.text]
+    for name, run in runs:
+        rows = run()
         hits = [r for r in rows if r.flagged]
         flagged += len(hits)
         print(f"{name}: {len(rows)} claims, {len(hits)} flagged")
@@ -145,7 +149,9 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("trace", help="each claim in a version's headline and summary, with the fact that backs it; "
                        "flags claims no fact backs (exit 1 if any)")
-    s.add_argument("versions", nargs="+")
+    s.add_argument("versions", nargs="*")
+    s.add_argument("--text", action="append", default=[], metavar="FILE", help="also trace the sentences of a "
+                   "cover letter or message (repeatable); the greeting and signature are skipped")
     s.add_argument("--least", type=float, default=0.5, help="flag a claim when no one fact has this share of its "
                    "words (default 0.5)")
     s.add_argument("--flagged", action="store_true", help="list only the flagged claims")

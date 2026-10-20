@@ -49,11 +49,29 @@ def terms(text: str) -> set[str]:
     return numbers | {w for w in words if len(w) > 2 and w not in STOP}
 
 
+def _sentences(text: str, where: str) -> list[tuple[str, str]]:
+    """(where, claim) for each sentence of text, split again at semicolons and colons. A sentence can start
+    lowercase when it opens with a package name ("iocflow is ...")."""
+    out = []
+    for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Za-z0-9])", " ".join(text.split())):
+        out += [(where, c.strip(" .")) for c in re.split(r"[;:]\s+", sentence) if len(c.strip(" .")) > 3]
+    return out
+
+
 def claims(spec: Spec) -> list[tuple[str, str]]:
     """(where, claim): the headline's parts, then the summary's sentences, split again at semicolons and colons."""
     out = [("headline", p.strip()) for p in re.split(r"\s*[•|]\s*", spec.headline) if p.strip()]
-    for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", " ".join(spec.summary.split())):
-        out += [("summary", c.strip(" .")) for c in re.split(r"[;:]\s+", sentence) if len(c.strip(" .")) > 3]
+    return out + _sentences(spec.summary, "summary")
+
+
+def prose_claims(text: str, where: str = "letter") -> list[tuple[str, str]]:
+    """(where, claim) for free text such as a cover letter, split like a summary. Only paragraphs that end a
+    sentence count, so the greeting ("Dear ...,") and the signature drop out, and so does a courtesy line too
+    short to claim anything ("Thank you for your time.") unless it has a number."""
+    out = []
+    for paragraph in re.split(r"\n\s*\n", text):
+        if re.search(r"[.!?]\s*$", paragraph):
+            out += [(w, c) for w, c in _sentences(paragraph, where) if len(terms(c)) >= 3 or NUMBER.search(c)]
     return out
 
 
@@ -90,10 +108,19 @@ MOST_FACTS = 3  # a summary sentence often joins a few facts: no more than this 
 def trace(spec: Spec, content: Path | None = None, least: float = 0.5) -> list[Traced]:
     """Each claim in the headline and summary, with its backing: up to MOST_FACTS facts, picked greedily for the
     claim's terms they add. Flagged: under `least` of its terms in those facts, or a number no fact has."""
+    return trace_claims(claims(spec), content, least)
+
+
+def trace_text(text: str, content: Path | None = None, least: float = 0.5) -> list[Traced]:
+    """The same for free text, such as a cover letter or a message to a recruiter."""
+    return trace_claims(prose_claims(text), content, least)
+
+
+def trace_claims(found: list[tuple[str, str]], content: Path | None = None, least: float = 0.5) -> list[Traced]:
     library = facts(content)
     everything = set().union(*library.values())
     out = []
-    for where, claim in claims(spec):
+    for where, claim in found:
         want = terms(claim)
         if not want:
             continue
