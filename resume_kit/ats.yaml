@@ -129,7 +129,7 @@ systems:
       - The phone field rejects the "+1 (555) 555-0100" format the import writes; enter ten digits.
       - Minimum compensation is two optional numeric boxes ($ per year, $ per hour). Leave them empty for adjunct and part-time pools rather than using the full-time salary answers.
       - Agency questions end with attestations (application-requirements review, the "did you remember" checklist, an application-integrity notice). They are the candidate's to tick. Leaving the tab with them unanswered shows a "Mandatory information missing" dialog; choose Stay on this Page.
-      - Many agencies want unofficial transcripts uploaded under Attachments.
+      - Many agencies want unofficial transcripts uploaded under Attachments ("Add supplemental attachment", type Transcript). Uploads that are password-protected are rejected, and that includes PDFs with only an owner password, which open without one, like university transcript downloads. Re-save without encryption first (`uv run --no-project --with pikepdf python -I -c "import pikepdf; p=pikepdf.open('in.pdf'); p.save('out.pdf')"`).
       - The session times out after a stretch with no activity (a warning banner appears first; click it to stay signed in). After a timeout, /apply goes to the sign-in page; saved cards survive, so have the candidate sign in again and reopen /apply. Fetch side documents such as transcripts before starting, or keep the tab active.
       - The resume import does not attach the file. Add it under Attachments with type "Resume".
       - Tabs open in order; a later tab's URL redirects back to the current one. Go forward with Next. Clicking a tab-list entry by ref can drop out to the job list, but a coordinate click on an earlier tab works.
