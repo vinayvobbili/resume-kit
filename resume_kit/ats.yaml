@@ -130,6 +130,7 @@ systems:
       - Minimum compensation is two optional numeric boxes ($ per year, $ per hour). Leave them empty for adjunct and part-time pools rather than using the full-time salary answers.
       - Agency questions end with attestations (application-requirements review, the "did you remember" checklist, an application-integrity notice). They are the candidate's to tick. Leaving the tab with them unanswered shows a "Mandatory information missing" dialog; choose Stay on this Page.
       - Many agencies want unofficial transcripts uploaded under Attachments.
+      - The session times out after a stretch with no activity (a warning banner appears first; click it to stay signed in). After a timeout, /apply goes to the sign-in page; saved cards survive, so have the candidate sign in again and reopen /apply. Fetch side documents such as transcripts before starting, or keep the tab active.
       - The resume import does not attach the file. Add it under Attachments with type "Resume".
       - Tabs open in order; a later tab's URL redirects back to the current one. Go forward with Next. Clicking a tab-list entry by ref can drop out to the job list, but a coordinate click on an earlier tab works.
       - '"Add ..." buttons (certificate, skills) sometimes ignore a script .click() after a reload; a real coordinate click opens the form, and its first field takes focus.'
