@@ -58,6 +58,13 @@ systems:
       - Offers Autofill with Resume / Apply Manually / Use My Last Application.
       - Use My Last Application copies the old resume file and role descriptions. Remove the old file, upload the
         new PDF, and replace each role description with the current version's bullets.
+      - The copied work history can be partial. Enter every job from answers.yaml work_history, and fill
+        Education (field of study too), Certifications, Languages, Skills and Websites; recruiters filter on them.
+      - Get My Experience right in one visit. After going Back to it, using Add Another in Work Experience or
+        Education drops the saved rows on the next save. If you must go back, add every row again as new, delete
+        the old rows, and check the Review page lists them all.
+      - Skills and other search lists only take real clicks on an option. Check that the list is open right
+        before clicking it: a click on a fixed position that misses can hit a Delete button underneath.
       - Find a dropdown by its question label, not its position. The header Settings button is a listbox too, and
         some questions only appear after an answer (an "at least 16" question shows when "at least 18" is No).
       - Dropdowns are buttons with aria-haspopup="listbox". Clicking a [role="option"] from script registers.
