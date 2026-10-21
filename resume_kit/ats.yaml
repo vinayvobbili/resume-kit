@@ -114,6 +114,22 @@ systems:
       - Preliminary questions mix Yes/No radios and searchable dropdowns. Click the dropdown, then click the option in the list that opens; take a screenshot before each pick, because the list's options move the fields below.
       - The posting's location is its hiring office with remote=true; "Remote, <city>, CALIFORNIA" alone doesn't mean remote only in that state. Look for a state limit in the posting text.
       - The last page has an electronic signature (name and today's date) and a privacy-notice declaration checkbox, both the candidate's. Submit is on that page.
+  neogov:
+    hosts: [www.governmentjobs.com, www.schooljobs.com]
+    account: candidate signs in or signs up (Sign in with Google still sends an email-confirmation link the candidate clicks)
+    job_page: https://www.schooljobs.com/careers/<agency>/jobs/<id>/<slug> (part-time and adjunct pools are listed under /careers/<agency>/transferjobs)
+    steps: [Résumé import, Info, Work, Education, Additional, References, Attachments, Questions, Review, Certify]
+    quirks:
+      - Importing the resume fills Work and Education, badly. Expect a role with no title or dates and another section's text in its duties, titles cut off at an "&" or a line break, and characters dropped from PDF ligatures and symbols ("efficacy" became "efcacy", "cutting" became "cutng", "×" vanished). Re-enter every duty summary from `resume show <version>` and check each entry's title and dates.
+      - Each card (contact, personal info, preferences, each job and school) has its own Edit and Save. Find Edit buttons by their text or aria-label and .click() them by script. A stale ref from the accessibility tree once clicked the header link instead and dropped out of the application to the agency's job list; reopen /apply and the saved cards are still there.
+      - Dropdowns are hidden <select> elements behind a typeahead. Set them with the setSelect helper (value plus a change event); typing into the typeahead and pressing Enter picked the wrong country ("India" became "British Indian Ocean Territory"). Countries outside the US have a single state option, "International".
+      - Education's start-month and end-month selects share one id (edu-education-select-start-month-dropdown); take the first and second match.
+      - Certificates need an issue month/year AND an expiration month/year; Save fails silently without them. Take dates from answers.yaml `certifications`.
+      - Text fields and radios accept the setNativeValue helper and a script .click(); confirm in the card's read-only view after Save.
+      - The phone field rejects the "+1 (555) 555-0100" format the import writes; enter ten digits.
+      - Minimum compensation is two optional numeric boxes ($ per year, $ per hour). Leave them empty for adjunct and part-time pools rather than using the full-time salary answers.
+      - Agency questions end with attestations (application-requirements review, the "did you remember" checklist, an application-integrity notice). They are the candidate's to tick. Leaving the tab with them unanswered shows a "Mandatory information missing" dialog; choose Stay on this Page.
+      - Many agencies want unofficial transcripts uploaded under Attachments.
 
 helpers:
   setNativeValue: |
