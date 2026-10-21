@@ -56,6 +56,12 @@ systems:
       - Usually refuses a second application to the same requisition from the same account.
       - Candidate Home shows application status (e.g. "Under review", "No longer under consideration").
       - Offers Autofill with Resume / Apply Manually / Use My Last Application.
+      - Use My Last Application copies the old resume file and role descriptions. Remove the old file, upload the
+        new PDF, and replace each role description with the current version's bullets.
+      - Find a dropdown by its question label, not its position. The header Settings button is a listbox too, and
+        some questions only appear after an answer (an "at least 16" question shows when "at least 18" is No).
+      - Dropdowns are buttons with aria-haspopup="listbox". Clicking a [role="option"] from script registers.
+      - Veteran status lists "I am not a veteran" apart from "a veteran, just not a protected veteran"; pick the exact one.
   linkedin:
     hosts: [www.linkedin.com]
     account: candidate is signed in
