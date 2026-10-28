@@ -49,7 +49,7 @@ def claude_env(keychain: str = "") -> dict[str, str]:
                          "that holds it")
     try:
         r = subprocess.run(["security", "find-generic-password", "-s", keychain, "-w"], capture_output=True,
-                           text=True, timeout=30)
+                           text=True, timeout=30, check=False)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise ScoreError(f"couldn't read the keychain item {keychain!r}: {type(e).__name__}") from None
     if r.returncode or not r.stdout.strip():
@@ -93,7 +93,8 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
     return data
 
 
-def to_text(data: dict) -> str:
+def to_text(data: dict, brief: bool = False) -> str:
+    """brief: only the score, the gaps, and the requirements not fully met (what's left to fix)."""
     out = [f"Scored {data['pdf']} ({data['pages']} page(s))"]
     out += [f"⚠️  resume flag: {f}" for f in data.get("flags", [])]
     for m in data.get("matches", []):
@@ -104,8 +105,10 @@ def to_text(data: dict) -> str:
             for g in m["gaps"]:
                 notes = m["gap_notes"].get(g)
                 out.append(f"    - {g}" + (f"\n      real gap, don't add it; guardrail {'; '.join(notes)}" if notes else ""))
-        out.append("  Requirements:")
-        for r in m["requirements"]:
+        reqs = [r for r in m["requirements"] if not brief or r["verdict"] != "met"]
+        if reqs:
+            out.append("  Requirements not fully met:" if brief else "  Requirements:")
+        for r in reqs:
             head = f"    {MARK[r['verdict']]} {r['requirement_id']} ({r['kind'].replace('_', '-')})"
             if r["evidence_verified"]:
                 out.append(head + (f" “{r['evidence'][0]}”" if r["evidence"] else ""))

@@ -90,6 +90,7 @@ resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews
 resume build --all --out /tmp/x     # RESUME_KIT_OUT also sets the default directory
 resume score acme                   # score against the version's posting (or pass posting files)
+resume score acme --brief           # just the score, the gaps, and what isn't fully met
 resume answers eeo                  # standard form answers
 resume ats jobs.ashbyhq.com --js    # quirks of the ATS behind a URL, with JS helpers
 ```

@@ -142,6 +142,20 @@ def test_unverified_evidence_lists_every_quote():
     assert "“LLM agents”" in text and "“invented quote”" in text
 
 
+def test_brief_keeps_only_what_is_left_to_fix():
+    match = {**CANNED["matches"][0], "gap_notes": {}, "gaps": ["kubernetes"], "requirements": [
+        {"requirement_id": "llm", "verdict": "met", "evidence": ["LLM agents"],
+         "reasoning": "", "kind": "must_have", "evidence_verified": True},
+        {"requirement_id": "kubernetes", "verdict": "partial", "evidence": ["Docker"],
+         "reasoning": "", "kind": "must_have", "evidence_verified": True}]}
+    data = {"pdf": "r.pdf", "pages": 2, "flags": [], "matches": [match]}
+    text = score.to_text(data, brief=True)
+    assert "/100" in text and "    - kubernetes" in text
+    assert "🟡 kubernetes (must-have) “Docker”" in text
+    assert "llm" not in text and "Requirements not fully met:" in text
+    assert "✅ llm" in score.to_text(data)
+
+
 def test_names_the_failing_quote_when_shortlist_reports_it():
     match = {**CANNED["matches"][0], "gap_notes": {}, "gaps": [], "requirements": [
         {"requirement_id": "llm", "verdict": "partial", "evidence": ["LLM agents", "invented quote"],
