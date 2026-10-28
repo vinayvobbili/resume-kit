@@ -91,6 +91,7 @@ resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page J
 resume build --all --out /tmp/x     # RESUME_KIT_OUT also sets the default directory
 resume score acme                   # score against the version's posting (or pass posting files)
 resume score acme --brief           # just the score, the gaps, and what isn't fully met
+resume score acme --backend claude,agy,local   # try each in order; one that fails falls back to the next
 resume answers eeo                  # standard form answers
 resume ats jobs.ashbyhq.com --js    # quirks of the ATS behind a URL, with JS helpers
 ```

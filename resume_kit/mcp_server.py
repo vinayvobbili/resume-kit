@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
@@ -81,11 +82,15 @@ def draft_version(name: str, posting_text: str, title: str | None = None, parent
 
 
 @server.tool()
-def score_version(version: str, postings: list[str] | None = None, backend: str = "local") -> dict:
+def score_version(version: str, postings: list[str] | None = None, backend: str | None = None) -> dict:
     """Score the built resume against job postings (file paths; default: the version's posting) with
-    shortlist-ai. Returns per-job score, must-haves met, gaps, and per-requirement verdicts with quotes.
-    gap_notes marks gaps that a guardrail says are real, which must not be papered over."""
-    return score.score(version, [Path(p) for p in postings] if postings else None, backend=backend)
+    shortlist-ai. backend: claude, agy or local, or several in the order to try ("claude,agy,local");
+    default $RESUME_KIT_BACKEND, else local. Returns per-job score, must-haves met, gaps, and per-requirement
+    verdicts with quotes, plus which backend scored and why any before it failed. gap_notes marks gaps that a
+    guardrail says are real, which must not be papered over."""
+    return score.score(version, [Path(p) for p in postings] if postings else None,
+                       backend=backend or os.environ.get("RESUME_KIT_BACKEND", "local"),
+                       keychain=os.environ.get("RESUME_KIT_KEYCHAIN", ""))
 
 
 @server.tool()

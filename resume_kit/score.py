@@ -20,6 +20,7 @@ from .content import ContentError, content_dir, resolve
 
 CACHE = Path(os.environ.get("RESUME_KIT_CACHE", Path.home() / ".cache" / "resume-kit"))
 MARK = {"met": "✅", "partial": "🟡", "not_met": "❌"}
+BACKENDS = ("claude", "agy", "local")  # shortlist-ai's backends; agy runs on the Antigravity subscription's quota
 
 
 class ScoreError(RuntimeError):
@@ -58,6 +59,20 @@ def claude_env(keychain: str = "") -> dict[str, str]:
     return env | {"ANTHROPIC_API_KEY": r.stdout.strip()}
 
 
+def _shortlist(backend: str, pdf: Path, postings: list[Path], keychain: str) -> dict:
+    env = claude_env(keychain) if backend == "claude" else None
+    # cwd=CACHE so shortlist's .shortlist-cache/ lands there and reruns reuse extractions.
+    proc = subprocess.run([find_shortlist(), "jobs", str(pdf), *map(str, postings),
+                           "--format", "json", "--backend", backend],
+                          cwd=CACHE, capture_output=True, text=True, check=False, env=env)
+    if proc.returncode:
+        raise ScoreError(f"shortlist failed ({proc.returncode}):\n{proc.stderr.strip()[-2000:]}")
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        raise ScoreError(f"shortlist returned non-JSON output:\n{proc.stdout[:500]}") from None
+
+
 def score(version: str, postings: list[Path] | None = None, backend: str = "local",
           content: Path | None = None, keychain: str = "") -> dict:
     content = content or content_dir()
@@ -71,19 +86,22 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
         if not p.exists():
             raise ContentError(f"posting not found: {p}")
 
-    env = claude_env(keychain) if backend == "claude" else None
+    backends = [b.strip() for b in backend.split(",") if b.strip()]
+    if not backends or any(b not in BACKENDS for b in backends):
+        raise ScoreError(f"backend must be one of {', '.join(BACKENDS)}, or several in the order to try "
+                         f"(claude,agy,local), got {backend!r}")
     CACHE.mkdir(parents=True, exist_ok=True)
     built = build(version, CACHE / "builds", content=content)
-    # cwd=CACHE so shortlist's .shortlist-cache/ lands there and reruns reuse extractions.
-    proc = subprocess.run([find_shortlist(), "jobs", str(built.pdf), *map(str, postings),
-                           "--format", "json", "--backend", backend],
-                          cwd=CACHE, capture_output=True, text=True, check=False, env=env)
-    if proc.returncode:
-        raise ScoreError(f"shortlist failed ({proc.returncode}):\n{proc.stderr.strip()[-2000:]}")
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        raise ScoreError(f"shortlist returned non-JSON output:\n{proc.stdout[:500]}") from None
+    failed: dict[str, str] = {}
+    for b in backends:  # in order: one that fails (no key, out of quota) hands the job to the next
+        try:
+            data = _shortlist(b, built.pdf, postings, keychain)
+            break
+        except ScoreError as e:
+            failed[b] = str(e)
+    else:
+        raise ScoreError("\n".join(f"{b}: {why}" for b, why in failed.items()))
+    data["backend"], data["failed_backends"] = b, failed
 
     rails = facts.load(content)
     for m in data.get("matches", []):
@@ -95,7 +113,9 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
 
 def to_text(data: dict, brief: bool = False) -> str:
     """brief: only the score, the gaps, and the requirements not fully met (what's left to fix)."""
-    out = [f"Scored {data['pdf']} ({data['pages']} page(s))"]
+    by = f" with {data['backend']}" if data.get("backend") else ""
+    out = [f"Scored {data['pdf']} ({data['pages']} page(s)){by}"]
+    out += [f"⚠️  {b} failed, so it fell back: {why.splitlines()[0]}" for b, why in data.get("failed_backends", {}).items()]
     out += [f"⚠️  resume flag: {f}" for f in data.get("flags", [])]
     for m in data.get("matches", []):
         out += ["", f"{m['job']['title']}: {m['score']:.0f}/100, must-haves {m['must_haves_met']}/{m['must_haves_total']}",

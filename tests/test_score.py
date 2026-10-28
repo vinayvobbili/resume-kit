@@ -109,6 +109,24 @@ def test_missing_posting_file(fake_shortlist):
         score.score("base", [Path("/nonexistent/job.md")])
 
 
+def test_a_failing_backend_falls_back_to_the_next(fake_shortlist, monkeypatch, tmp_path):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    picky = tmp_path / "picky"  # only the local backend answers, the way claude or agy out of quota would fail
+    picky.write_text(f"#!{sys.executable}\nimport sys\nif sys.argv[-1] != 'local':\n"
+                     f"    sys.stderr.write(sys.argv[-1] + ' is out of quota'); sys.exit(1)\n"
+                     f"print({json.dumps(json.dumps(CANNED))})\n")
+    picky.chmod(0o755)
+    monkeypatch.setenv("RESUME_KIT_SHORTLIST", str(picky))
+    data = score.score("acme", backend="claude,agy,local")
+    assert data["backend"] == "local" and list(data["failed_backends"]) == ["claude", "agy"]
+    text = score.to_text(data)
+    assert "with local" in text and "⚠️  agy failed, so it fell back" in text
+    with pytest.raises(score.ScoreError, match=r"claude: shortlist failed \(1\):\nclaude is out of quota\nagy: "):
+        score.score("acme", backend="claude,agy")
+    with pytest.raises(score.ScoreError, match="backend must be one of"):
+        score.score("acme", backend="claude,gpt")
+
+
 def test_shortlist_failure_is_reported(fake_shortlist, monkeypatch, tmp_path):
     bad = tmp_path / "bad"
     bad.write_text(f"#!{sys.executable}\nimport sys\nsys.stderr.write('Error: model not found')\nsys.exit(1)\n")

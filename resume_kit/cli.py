@@ -191,9 +191,10 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("score", help="score a version against job postings with shortlist-ai")
     s.add_argument("version")
     s.add_argument("postings", nargs="*", help="posting files (.md/.txt/.pdf/.docx); default: the version's `posting:`")
-    s.add_argument("--backend", choices=["local", "claude"], default=os.environ.get("RESUME_KIT_BACKEND", "local"),
-                   help="local keeps the resume on this machine (default, or $RESUME_KIT_BACKEND); claude needs "
-                        "ANTHROPIC_API_KEY or --keychain")
+    s.add_argument("--backend", default=os.environ.get("RESUME_KIT_BACKEND", "local"),
+                   help="claude, agy or local, or several in the order to try (claude,agy,local: each that fails "
+                        "falls back to the next); local keeps the resume on this machine (default, or "
+                        "$RESUME_KIT_BACKEND); claude needs ANTHROPIC_API_KEY or --keychain")
     s.add_argument("--keychain", default=os.environ.get("RESUME_KIT_KEYCHAIN", ""),
                    help="macOS keychain item holding the Anthropic API key, when ANTHROPIC_API_KEY isn't set "
                         "(default $RESUME_KIT_KEYCHAIN)")
