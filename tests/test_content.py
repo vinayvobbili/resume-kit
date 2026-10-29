@@ -82,6 +82,19 @@ def test_undated_education_leaves_graduation_dates_off(content):
         assert "2017" not in spec.text().split("EDUCATION")[1]
 
 
+def test_hide_contact_leaves_matching_entries_off_and_rejects_typos(content):
+    assert "github.com/alex-rivera-example" in resolve("base").contact
+    write_variant(content, "t", {"extends": "base", "output": "t", "hide_contact": ["github.com"]})
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})
+    for v in ("t", "t2"):
+        spec = resolve(v)
+        assert spec.contact == ["alex.rivera@example.com", "+1 (555) 010-0199", "Denver, CO (Remote)"]
+        assert "github.com" not in spec.text().splitlines()[2]
+    write_variant(content, "u", {"extends": "base", "output": "u", "hide_contact": ["gitlab.com"]})
+    with pytest.raises(ContentError, match="matches no contact entry"):
+        resolve("u")
+
+
 def test_education_gpa_follows_the_dates(content):
     profile = yaml.safe_load((content / "profile.yaml").read_text())
     profile["education"][0]["gpa"] = "3.9"
@@ -137,6 +150,20 @@ def test_forbidden_rules_catch_claims(bad, rule):
 def test_required_rules_catch_missing_facts():
     text = resolve("base").text().replace("BS in Computer Science", "BS in Physics")
     assert [v.split(":")[0] for v in facts.load().violations(text)] == ["degree"]
+
+
+def test_waive_skips_a_required_rule_but_never_a_forbidden_one(content):
+    (content / "guardrails.yaml").write_text(
+        "forbidden:\n  - {id: k8s, pattern: Kubernetes, why: tutorial only}\n"
+        "required:\n  - {id: gh, pattern: github\\.com, why: header link}\n")
+    write_variant(content, "t", {"extends": "base", "output": "t", "hide_contact": ["github.com"]})
+    assert facts.check(resolve("t")) == ["gh: missing (header link)"]
+    write_variant(content, "t", {"extends": "base", "output": "t", "hide_contact": ["github.com"], "waive": ["gh"]})
+    assert facts.check(resolve("t")) == [] and facts.check(resolve("t"), reuse=True) == []
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})  # a waiver is the version's own, not inherited
+    assert facts.check(resolve("t2")) == ["gh: missing (header link)"]
+    write_variant(content, "t3", {"extends": "base", "output": "t3", "waive": ["k8s"]})
+    assert facts.check(resolve("t3")) == ["waive: 'k8s' is not a required rule"]
 
 
 def test_case_sensitive_rules(content):

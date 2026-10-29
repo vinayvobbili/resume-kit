@@ -40,11 +40,13 @@ class Guardrails:
     forbidden: tuple[Rule, ...] = ()
     required: tuple[Rule, ...] = ()
 
-    def violations(self, text: str, applied: str = "") -> list[str]:
-        """What `text` breaks; `applied` (YYYY-MM-DD) skips rules added after that version was sent."""
+    def violations(self, text: str, applied: str = "", waive: tuple[str, ...] = ()) -> list[str]:
+        """What `text` breaks; `applied` (YYYY-MM-DD) skips rules added after that version was sent, and
+        `waive` names required rules this version leaves out on purpose (a forbidden rule is never waived)."""
         forbidden = [r for r in self.forbidden if r.applies(applied)]
-        required = [r for r in self.required if r.applies(applied)]
-        problems = [f"{r.id}: found {r.find(text)[:3]} ({r.why})" for r in forbidden if r.find(text)]
+        required = [r for r in self.required if r.applies(applied) and r.id not in waive]
+        problems = [f"waive: {w!r} is not a required rule" for w in waive if w not in {r.id for r in self.required}]
+        problems += [f"{r.id}: found {r.find(text)[:3]} ({r.why})" for r in forbidden if r.find(text)]
         problems += [f"{r.id}: missing ({r.why})" for r in required if not r.find(text)]
         return problems
 
@@ -72,4 +74,5 @@ def load(content: Path | None = None) -> Guardrails:
 def check(spec: Spec, content: Path | None = None, reuse: bool = False) -> list[str]:
     """What a version breaks. A version already applied with skips rules added after it was sent, unless
     `reuse`: it's about to be sent again, so every rule holds."""
-    return load(content).violations(spec.text(), "" if reuse else str(spec.meta.get("applied", "")))
+    return load(content).violations(spec.text(), "" if reuse else str(spec.meta.get("applied", "")),
+                                    tuple(spec.meta.get("waive", [])))

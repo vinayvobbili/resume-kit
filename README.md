@@ -66,6 +66,8 @@ roles:
 drop: [iam_diff]                                                          # remove ids from any list (a role id drops the role)
 undated: [contoso]                                                        # show these roles without dates
 undated_education: true                                                   # leave graduation dates off (education `dates:`)
+hide_contact: [github.com]                                                # leave contact entries off that contain these
+waive: [github-link]                                                      # required guardrails this version skips (its own, never a forbidden one)
 ```
 
 To start a tailored version from a job posting, let resume-kit draft it:

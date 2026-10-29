@@ -27,8 +27,8 @@ USER_CONTENT = Path.home() / ".config" / "resume-kit" / "content"
 EXAMPLE_CONTENT = REPO / "examples" / "content"
 
 LIST_KEYS = ("skills", "open_source", "certs")
-SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education")
-OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
+SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact")
+OWN_KEYS = ("title", "output", "posting", "applied", "notes", "waive")  # this version's own; not inherited
 
 
 class ContentError(ValueError):
@@ -221,6 +221,10 @@ def resolve(name: str, content: Path | None = None) -> Spec:
     unknown_roles = (set(v["roles"]) | set(v["undated"])) - {r["id"] for r in profile["roles"]}
     if unknown_roles:
         raise ContentError(f"{name}: unknown role id(s) {sorted(unknown_roles)}")
+    hide = v.get("hide_contact", [])
+    unmatched = [h for h in hide if not any(h in c for c in profile["contact"])]
+    if unmatched:
+        raise ContentError(f"{name}: hide_contact {unmatched} matches no contact entry; contact: {profile['contact']}")
 
     return Spec(
         name=profile["name"],
@@ -228,7 +232,7 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         title=v.get("title", name),
         output=v["output"],
         headline=v["headline"],
-        contact=profile["contact"],
+        contact=[c for c in profile["contact"] if not any(h in c for h in hide)],
         summary=v["summary"],
         skills=pick(v["skills"], profile["skills"], "skills"),
         roles=roles,
@@ -239,5 +243,5 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         certs_inline=bool(v.get("certs_inline", False)),
         pages=int(v.get("pages", profile.get("pages", 2))),
         posting=content / v["posting"] if v.get("posting") else None,
-        meta={k: v[k] for k in ("applied", "notes") if k in v},
+        meta={k: v[k] for k in ("applied", "notes", "waive") if k in v},
     )
