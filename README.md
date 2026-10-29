@@ -69,6 +69,7 @@ undated_education: true                                                   # leav
 hide_contact: [github.com]                                                # leave contact entries off that contain these
 replace_contact: {alex.rivera@example.com: arivera@northwind.example}     # show another entry in one's place
 waive: [github-link]                                                      # required guardrails this version skips (never a forbidden one)
+copy_to: [~/.local/share/jobwatch/resume]                                 # folders a build also copies the PDF into (this version only)
 ```
 
 To start a tailored version from a job posting, let resume-kit draft it:

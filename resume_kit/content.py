@@ -30,7 +30,8 @@ LIST_KEYS = ("skills", "open_source", "certs")
 # waive is inherited with hide_contact: a child of a version that hides its links leaves them off too
 SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact", "waive",
                "replace_contact")
-OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
+# this version's own; not inherited. copy_to: folders a build also copies the PDF into (another tool reads it there)
+OWN_KEYS = ("title", "output", "posting", "applied", "notes", "copy_to")
 
 
 class ContentError(ValueError):
@@ -249,5 +250,5 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         certs_inline=bool(v.get("certs_inline", False)),
         pages=int(v.get("pages", profile.get("pages", 2))),
         posting=content / v["posting"] if v.get("posting") else None,
-        meta={k: v[k] for k in ("applied", "notes", "waive") if k in v},
+        meta={k: v[k] for k in ("applied", "notes", "waive", "copy_to") if k in v},
     )

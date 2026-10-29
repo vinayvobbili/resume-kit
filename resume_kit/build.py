@@ -8,7 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import facts
@@ -37,6 +37,7 @@ class BuildResult:
     target: int
     overflow: str  # text past the last allowed page, if any
     fill: float = 1.0  # how far down its usable height the last page's text reaches
+    copies: list[Path] = field(default_factory=list)  # where copy_to put the PDF too
 
     @property
     def ok(self) -> bool:
@@ -44,6 +45,7 @@ class BuildResult:
 
     def summary(self) -> str:
         line = f"{self.version}: {self.pages} page(s) -> {self.pdf}"
+        line += "".join(f"\n  copied to {c}" for c in self.copies)
         if self.pages > self.target:
             line += f"\n  spills onto page {self.target + 1}:\n    " + self.overflow.strip().replace("\n", "\n    ")
         elif self.pages < self.target:
@@ -128,7 +130,12 @@ def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
     pdf = to_pdf(docx)
     pages = page_count(pdf)
     overflow = page_text(pdf, spec.pages + 1, pages) if pages > spec.pages else ""
-    return BuildResult(version, docx, pdf, pages, spec.pages, overflow, last_page_fill(pdf, pages))
+    copies = []
+    for folder in spec.meta.get("copy_to", []):
+        dest = Path(folder).expanduser()
+        dest.mkdir(parents=True, exist_ok=True)
+        copies.append(Path(shutil.copy2(pdf, dest / pdf.name)))
+    return BuildResult(version, docx, pdf, pages, spec.pages, overflow, last_page_fill(pdf, pages), copies)
 
 
 def preview(pdf: Path, out_dir: Path | None = None, dpi: int = 80) -> list[Path]:

@@ -28,6 +28,17 @@ def test_pdf_carries_the_content(tmp_path):
     assert "iam-diff" not in text  # dropped by the acme version
 
 
+def test_copy_to_puts_the_pdf_in_each_folder_and_is_not_inherited(content, tmp_path):
+    from test_content import write_variant  # the content fixture's variants folder
+
+    write_variant(content, "t", {"extends": "base", "output": "t", "copy_to": [str(tmp_path / "jobwatch")]})
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})
+    result = build("t", tmp_path / "out")
+    assert result.copies == [tmp_path / "jobwatch" / "t.pdf"] and result.copies[0].read_bytes() == result.pdf.read_bytes()
+    assert f"copied to {tmp_path / 'jobwatch' / 't.pdf'}" in result.summary()
+    assert build("t2", tmp_path / "out").copies == []
+
+
 def test_a_short_last_page_is_reported(tmp_path):
     result = build("base", tmp_path)  # the example base fills a little of its one page
     assert 0 < result.fill < build_mod.FULL
