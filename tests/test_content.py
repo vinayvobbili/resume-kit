@@ -285,7 +285,8 @@ def test_draft_picks_the_closest_parent_and_respects_its_drops(content):
     assert "iam_diff" not in yaml.safe_load(d.path.read_text()).get("open_source", [])
 
 
-@pytest.mark.parametrize("hides", [{"drop": ["iam_diff", "contoso"]}, {"undated": ["contoso"]}])
+@pytest.mark.parametrize("hides", [{"drop": ["iam_diff", "contoso"]}, {"undated": ["contoso"]},
+                                   {"hide_contact": ["github.com"]}])
 def test_draft_never_picks_a_parent_that_hides_work_history(content, hides):
     from resume_kit import draft
 
