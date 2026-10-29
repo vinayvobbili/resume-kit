@@ -28,6 +28,19 @@ def test_pdf_carries_the_content(tmp_path):
     assert "iam-diff" not in text  # dropped by the acme version
 
 
+def test_a_short_last_page_is_reported(tmp_path):
+    result = build("base", tmp_path)  # the example base fills a little of its one page
+    assert 0 < result.fill < build_mod.FULL
+    assert f"page 1 is {result.fill:.0%} full" in result.summary()
+
+
+def test_fill_measures_the_lowest_text_inside_the_margins():
+    xml = ('<page width="612.000000" height="792.000000"><flow><block xMin="36" yMin="40" xMax="500" yMax="100">'
+           '</block><block xMin="36" yMin="300" xMax="500" yMax="396.000000"></block></flow></page>')
+    assert build_mod.fill(xml) == pytest.approx(0.5)
+    assert build_mod.fill('<page width="612" height="792"></page>') == 0.0
+
+
 def test_overflow_is_reported(content, tmp_path):
     variant = content / "variants" / "base.yaml"
     variant.write_text(variant.read_text().replace("summary: >-\n", "summary: >-\n  " + "Long filler text. " * 400 + "\n"))

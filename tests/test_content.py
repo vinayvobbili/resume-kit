@@ -95,6 +95,18 @@ def test_hide_contact_leaves_matching_entries_off_and_rejects_typos(content):
         resolve("u")
 
 
+def test_replace_contact_swaps_an_entry_in_place_and_rejects_unknown_ones(content):
+    write_variant(content, "t", {"extends": "base", "output": "t", "hide_contact": ["github.com"],
+                                 "replace_contact": {"alex.rivera@example.com": "arivera@northwind.example"}})
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})
+    for v in ("t", "t2"):
+        assert resolve(v).contact == ["arivera@northwind.example", "+1 (555) 010-0199", "Denver, CO (Remote)"]
+    assert resolve("base").contact[0] == "alex.rivera@example.com"
+    write_variant(content, "u", {"extends": "base", "output": "u", "replace_contact": {"alex@example.com": "x"}})
+    with pytest.raises(ContentError, match="is no contact entry"):
+        resolve("u")
+
+
 def test_education_gpa_follows_the_dates(content):
     profile = yaml.safe_load((content / "profile.yaml").read_text())
     profile["education"][0]["gpa"] = "3.9"
@@ -286,7 +298,8 @@ def test_draft_picks_the_closest_parent_and_respects_its_drops(content):
 
 
 @pytest.mark.parametrize("hides", [{"drop": ["iam_diff", "contoso"]}, {"undated": ["contoso"]},
-                                   {"hide_contact": ["github.com"]}])
+                                   {"hide_contact": ["github.com"]},
+                                   {"replace_contact": {"alex.rivera@example.com": "arivera@northwind.example"}}])
 def test_draft_never_picks_a_parent_that_hides_work_history(content, hides):
     from resume_kit import draft
 

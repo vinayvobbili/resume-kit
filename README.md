@@ -67,6 +67,7 @@ drop: [iam_diff]                                                          # remo
 undated: [contoso]                                                        # show these roles without dates
 undated_education: true                                                   # leave graduation dates off (education `dates:`)
 hide_contact: [github.com]                                                # leave contact entries off that contain these
+replace_contact: {alex.rivera@example.com: arivera@northwind.example}     # show another entry in one's place
 waive: [github-link]                                                      # required guardrails this version skips (never a forbidden one)
 ```
 

@@ -59,7 +59,7 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
     was sent too. as_sent: re-render it as it was sent instead (not to send again)."""
     r = build(version, Path(out_dir) if out_dir else DEFAULT_OUT, as_sent=as_sent)
     result = {"version": version, "pages": r.pages, "target_pages": r.target, "ok": r.ok,
-              "docx": str(r.docx), "pdf": str(r.pdf)}
+              "last_page_fill": round(r.fill, 2), "docx": str(r.docx), "pdf": str(r.pdf)}
     if r.overflow:
         result["overflow_text"] = r.overflow
     if with_preview:

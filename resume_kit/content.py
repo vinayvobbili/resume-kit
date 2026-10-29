@@ -28,7 +28,8 @@ EXAMPLE_CONTENT = REPO / "examples" / "content"
 
 LIST_KEYS = ("skills", "open_source", "certs")
 # waive is inherited with hide_contact: a child of a version that hides its links leaves them off too
-SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact", "waive")
+SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact", "waive",
+               "replace_contact")
 OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
 
 
@@ -226,6 +227,10 @@ def resolve(name: str, content: Path | None = None) -> Spec:
     unmatched = [h for h in hide if not any(h in c for c in profile["contact"])]
     if unmatched:
         raise ContentError(f"{name}: hide_contact {unmatched} matches no contact entry; contact: {profile['contact']}")
+    swap = v.get("replace_contact", {})  # {profile entry: what this version shows instead}, e.g. a work email
+    unknown = [k for k in swap if k not in profile["contact"]]
+    if unknown:
+        raise ContentError(f"{name}: replace_contact {unknown} is no contact entry; contact: {profile['contact']}")
 
     return Spec(
         name=profile["name"],
@@ -233,7 +238,7 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         title=v.get("title", name),
         output=v["output"],
         headline=v["headline"],
-        contact=[c for c in profile["contact"] if not any(h in c for h in hide)],
+        contact=[swap.get(c, c) for c in profile["contact"] if not any(h in c for h in hide)],
         summary=v["summary"],
         skills=pick(v["skills"], profile["skills"], "skills"),
         roles=roles,

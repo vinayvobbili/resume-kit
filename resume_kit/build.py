@@ -20,6 +20,10 @@ DEFAULT_OUT = Path(os.environ.get("RESUME_KIT_OUT", Path.home() / "Downloads"))
 PREVIEWS = Path(os.environ.get("RESUME_KIT_CACHE", Path.home() / ".cache" / "resume-kit")) / "previews"
 
 
+MARGIN_PT = 36  # render.js margins: 720 twips on every side
+FULL = 0.9  # a last page filled less than this ends in blank space that reads as unfinished
+
+
 class BuildError(RuntimeError):
     pass
 
@@ -32,6 +36,7 @@ class BuildResult:
     pages: int
     target: int
     overflow: str  # text past the last allowed page, if any
+    fill: float = 1.0  # how far down its usable height the last page's text reaches
 
     @property
     def ok(self) -> bool:
@@ -43,6 +48,8 @@ class BuildResult:
             line += f"\n  spills onto page {self.target + 1}:\n    " + self.overflow.strip().replace("\n", "\n    ")
         elif self.pages < self.target:
             line += f"\n  under {self.target} page(s); room to add content"
+        elif self.fill < FULL:
+            line += f"\n  page {self.pages} is {self.fill:.0%} full; add content so it doesn't end in blank space"
         return line
 
 
@@ -90,6 +97,18 @@ def page_text(pdf: Path, first: int, last: int | None = None) -> str:
                            "-l", str(last or first), str(pdf), "-"], check=True, capture_output=True, text=True).stdout
 
 
+def fill(bbox_xml: str) -> float:
+    """How far down the usable height (inside the margins) a page's text reaches, from `pdftotext -bbox-layout`."""
+    height = float(re.search(r'<page width="[\d.]+" height="([\d.]+)"', bbox_xml).group(1))
+    bottoms = [float(y) for y in re.findall(r'<block [^>]*yMax="([\d.]+)"', bbox_xml)]
+    return (max(bottoms) - MARGIN_PT) / (height - 2 * MARGIN_PT) if bottoms else 0.0
+
+
+def last_page_fill(pdf: Path, page: int) -> float:
+    return fill(subprocess.run([_need("pdftotext", "brew install poppler"), "-bbox-layout", "-f", str(page),
+                                "-l", str(page), str(pdf), "-"], check=True, capture_output=True, text=True).stdout)
+
+
 def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
           content: Path | None = None, as_sent: bool = False) -> BuildResult:
     """Render a version. A build is a copy to send, so a version already applied with is held to every
@@ -109,7 +128,7 @@ def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
     pdf = to_pdf(docx)
     pages = page_count(pdf)
     overflow = page_text(pdf, spec.pages + 1, pages) if pages > spec.pages else ""
-    return BuildResult(version, docx, pdf, pages, spec.pages, overflow)
+    return BuildResult(version, docx, pdf, pages, spec.pages, overflow, last_page_fill(pdf, pages))
 
 
 def preview(pdf: Path, out_dir: Path | None = None, dpi: int = 80) -> list[Path]:
