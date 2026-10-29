@@ -62,6 +62,8 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
               "last_page_fill": round(r.fill, 2), "docx": str(r.docx), "pdf": str(r.pdf)}
     if r.overflow:
         result["overflow_text"] = r.overflow
+    if r.long_name:
+        result["file_name_warning"] = r.long_name
     if with_preview:
         result["preview_images"] = [str(p) for p in preview(r.pdf)]
     return result

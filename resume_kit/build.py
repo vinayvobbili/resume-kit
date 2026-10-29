@@ -22,6 +22,7 @@ PREVIEWS = Path(os.environ.get("RESUME_KIT_CACHE", Path.home() / ".cache" / "res
 
 MARGIN_PT = 36  # render.js margins: 720 twips on every side
 FULL = 0.9  # a last page filled less than this ends in blank space that reads as unfinished
+NAME_MAX = 55  # longest PDF file name some application sites take (Phenom refuses longer ones)
 
 
 class BuildError(RuntimeError):
@@ -43,6 +44,13 @@ class BuildResult:
     def ok(self) -> bool:
         return self.pages == self.target
 
+    @property
+    def long_name(self) -> str:
+        """Why the PDF's file name is too long to upload everywhere, or "" when it isn't."""
+        n = len(self.pdf.name)
+        return (f"file name is {n} characters; some application sites refuse names over {NAME_MAX}: "
+                "shorten the version's output" if n > NAME_MAX else "")
+
     def summary(self) -> str:
         line = f"{self.version}: {self.pages} page(s) -> {self.pdf}"
         line += "".join(f"\n  copied to {c}" for c in self.copies)
@@ -52,6 +60,8 @@ class BuildResult:
             line += f"\n  under {self.target} page(s); room to add content"
         elif self.fill < FULL:
             line += f"\n  page {self.pages} is {self.fill:.0%} full; add content so it doesn't end in blank space"
+        if self.long_name:
+            line += f"\n  {self.long_name}"
         return line
 
 
