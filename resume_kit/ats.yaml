@@ -109,7 +109,7 @@ systems:
     quirks:
       - Every field sits in shadow DOM (spl-* components), so the accessibility tree and plain querySelector see almost nothing. Read fields with the shadowFields helper; fill them with real clicks and typing, since setNativeValue on these inputs throws "Illegal invocation".
       - The resume input is inside the SPL-DROPZONE shadow root; a file-upload tool doesn't register there, even after moving the input. The candidate clicks "Choose a file" in the Resume box and picks the tailored PDF. Uploading it parses the resume into the Experience and Education cards; check them.
-      - Parsing sets City from the resume's location line (e.g. "Durham"). Retype the candidate's own city. "Confirm your email" starts empty and is required.
+      - Parsing sets City from the resume's location line (e.g. "Maple Falls"). Retype the candidate's own city. "Confirm your email" starts empty and is required.
       - The "Message to the Hiring Team" box is optional free text; keep a copy of what goes in it.
       - Preliminary questions mix Yes/No radios and searchable dropdowns. Click the dropdown, then click the option in the list that opens; take a screenshot before each pick, because the list's options move the fields below.
       - The posting's location is its hiring office with remote=true; "Remote, <city>, CALIFORNIA" alone doesn't mean remote only in that state. Look for a state limit in the posting text.
