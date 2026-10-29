@@ -27,8 +27,9 @@ USER_CONTENT = Path.home() / ".config" / "resume-kit" / "content"
 EXAMPLE_CONTENT = REPO / "examples" / "content"
 
 LIST_KEYS = ("skills", "open_source", "certs")
-SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact")
-OWN_KEYS = ("title", "output", "posting", "applied", "notes", "waive")  # this version's own; not inherited
+# waive is inherited with hide_contact: a child of a version that hides its links leaves them off too
+SCALAR_KEYS = ("headline", "summary", "certs_inline", "pages", "undated_education", "hide_contact", "waive")
+OWN_KEYS = ("title", "output", "posting", "applied", "notes")  # this version's own; not inherited
 
 
 class ContentError(ValueError):

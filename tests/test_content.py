@@ -160,8 +160,10 @@ def test_waive_skips_a_required_rule_but_never_a_forbidden_one(content):
     assert facts.check(resolve("t")) == ["gh: missing (header link)"]
     write_variant(content, "t", {"extends": "base", "output": "t", "hide_contact": ["github.com"], "waive": ["gh"]})
     assert facts.check(resolve("t")) == [] and facts.check(resolve("t"), reuse=True) == []
-    write_variant(content, "t2", {"extends": "t", "output": "t2"})  # a waiver is the version's own, not inherited
-    assert facts.check(resolve("t2")) == ["gh: missing (header link)"]
+    write_variant(content, "t2", {"extends": "t", "output": "t2"})  # inherited along with hide_contact
+    assert resolve("t2").contact == resolve("t").contact and facts.check(resolve("t2")) == []
+    write_variant(content, "t2", {"extends": "t", "output": "t2", "hide_contact": [], "waive": []})
+    assert facts.check(resolve("t2")) == []  # links back on, rule back on
     write_variant(content, "t3", {"extends": "base", "output": "t3", "waive": ["k8s"]})
     assert facts.check(resolve("t3")) == ["waive: 'k8s' is not a required rule"]
 
