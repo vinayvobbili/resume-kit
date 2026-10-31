@@ -23,7 +23,7 @@ the their them then these they this those to was we were what when where which w
 your also all any both each every more most other over some such very just only own same through about after
 before during under up out off again across around per via one two three four five six seven eight nine ten
 years year last first now earlier today work worked working built build building
-""".split())
+""".split())  # noqa: SIM905 (a word list reads better as text)
 
 NUMBER = re.compile(r"\d[\d,.]*\+?%?")
 WORD = re.compile(r"[a-z][a-z0-9'&/-]*")

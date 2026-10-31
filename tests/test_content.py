@@ -274,6 +274,10 @@ def test_draft_orders_confirmed_facts_by_relevance(content):
     data = yaml.safe_load(d.path.read_text())
     assert data["extends"] == "base" and data["posting"] == "postings/acme-staff.md"
     assert data["output"] == "Alex_Rivera_Resume_Acme_Staff"
+    # A long version name loses its last words so the PDF's name fits every application site.
+    assert draft._output("Alex Rivera", "initech-senior-staff-detection-engineer-platform") == \
+        "Alex_Rivera_Resume_Initech_Senior_Staff_Detection"
+    assert len(draft._output("Alexandra Montgomery-Riverside", "initech-staff") + ".pdf") <= 55
     assert (content / "postings" / "acme-staff.md").read_text().startswith("Staff Detection Engineer")
     # Detection first; the parent's counts are kept.
     assert data["skills"][0] == "detection" and len(data["skills"]) == 4

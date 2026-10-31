@@ -40,6 +40,6 @@ def test_an_unknown_ats_says_which_ones_are_known():
     try:
         result = asyncio.run(server.call_tool("ats_playbook", {"system": "successfactors"}))
         text = result.content[0].text
-    except Exception as e:  # the server can raise the ToolError rather than return it as a result
+    except Exception as e:  # noqa: BLE001  (the server can raise the ToolError rather than return it as a result)
         text = str(e)
     assert "unknown ATS 'successfactors'" in text and "greenhouse" in text

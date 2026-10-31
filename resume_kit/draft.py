@@ -18,6 +18,7 @@ from pathlib import Path
 import yaml
 
 from . import facts as guardrails
+from .build import NAME_MAX
 from .content import ContentError, content_dir, list_versions, load_profile, raw_version, resolve
 
 # A word block reads better than a 100-item list literal.
@@ -120,6 +121,15 @@ def _slug(name: str) -> str:
     return "_".join(w.capitalize() for w in re.split(r"[^A-Za-z0-9]+", name) if w)
 
 
+def _output(person: str, name: str) -> str:
+    """The PDF's file stem: the person's name, "Resume", then the version's words, dropping its last words until
+    the file name fits what every application site takes (build.NAME_MAX)."""
+    stem, words = f"{person.replace(' ', '_')}_Resume", _slug(name).split("_")
+    while words and len(f"{stem}_{'_'.join(words)}.pdf") > NAME_MAX:
+        words.pop()
+    return "_".join([stem, *words])
+
+
 def draft(name: str, posting_text: str, title: str | None = None, parent: str | None = None,
           output: str | None = None, content: Path | None = None, force: bool = False) -> Draft:
     content = content or content_dir()
@@ -160,8 +170,7 @@ def draft(name: str, posting_text: str, title: str | None = None, parent: str | 
     base = raw_version(parent, content)
 
     changed: dict[str, tuple[list, list]] = {}
-    data: dict = {"extends": parent, "title": title or name, "output": output or
-                  f"{profile['name'].replace(' ', '_')}_Resume_{_slug(name)}"}
+    data: dict = {"extends": parent, "title": title or name, "output": output or _output(profile["name"], name)}
 
     posting_path = content / "postings" / f"{name}.md"
     posting_path.parent.mkdir(parents=True, exist_ok=True)
