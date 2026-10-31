@@ -17,6 +17,12 @@ from .content import ContentError, content_dir, library, list_versions, picked, 
 
 
 def cmd_list(args) -> int:
+    if args.json:  # for tools that keep a version's PDF (jobwatch finds the version that built a resume by its output)
+        own = [(name, raw_version(name)) for name in list_versions()]
+        print(json.dumps([{"name": name, "title": v.get("title", ""), "output": v.get("output", ""),
+                           "posting": v.get("posting", ""), "applied": str(v.get("applied") or "")}
+                          for name, v in own], indent=2, ensure_ascii=False))
+        return 0
     print(f"content: {content_dir()}")
     for name in list_versions():
         v = raw_version(name)
@@ -136,7 +142,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--content", help="content directory (default: $RESUME_KIT_CONTENT, then ~/.config/resume-kit/content)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("list", help="list resume versions").set_defaults(fn=cmd_list)
+    s = sub.add_parser("list", help="list resume versions")
+    s.add_argument("--json", action="store_true", help="each version's name, title, output, posting and applied date")
+    s.set_defaults(fn=cmd_list)
 
     s = sub.add_parser("show", help="print a version as plain text")
     s.add_argument("version")

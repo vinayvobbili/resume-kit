@@ -17,6 +17,13 @@ def test_example_versions():
     assert list_versions() == ["acme", "base"]
 
 
+def test_list_as_json_names_each_versions_file(capsys):
+    assert cli.main(["list", "--json"]) == 0
+    got = {v["name"]: v for v in json.loads(capsys.readouterr().out)}
+    assert set(got) == {"acme", "base"}
+    assert got["acme"]["output"] and set(got["acme"]) == {"name", "title", "output", "posting", "applied"}
+
+
 def test_facts_lists_every_id_and_numbers_a_versions_picks(capsys):
     assert cli.main(["facts", "northwind", "--version", "acme", "--width", "40"]) == 0
     out = capsys.readouterr().out.splitlines()
