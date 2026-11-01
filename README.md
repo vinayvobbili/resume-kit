@@ -155,6 +155,8 @@ pytest                   # also renders the examples and checks page targets and
 
 Tests only ever use the fictional example content.
 
+`scripts/check` runs what CI runs (ruff, then pytest on Python 3.11 and 3.13); `git config core.hooksPath .githooks` makes it run before every push.
+
 ## License
 
 MIT
