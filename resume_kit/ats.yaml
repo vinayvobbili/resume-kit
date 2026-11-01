@@ -69,6 +69,14 @@ systems:
         some questions only appear after an answer (an "at least 16" question shows when "at least 18" is No).
       - Dropdowns are buttons with aria-haspopup="listbox". Clicking a [role="option"] from script registers.
       - Veteran status lists "I am not a veteran" apart from "a veteran, just not a protected veteran"; pick the exact one.
+        Match the option's start ("I AM NOT A VETERAN"): a pattern like /not a veteran/ also hits the other one.
+      - Autofill with Resume can run one role into the next (the last role's description picks up the resume's
+        open-source section, its dates become 01/<year>): check every role's dates and description against
+        answers.yaml.
+      - Role descriptions refuse < > [ ] " { } \ (the save fails with "Contains illegal characters"). Swap them
+        (straight quotes for ', brackets for parentheses). A value set with setNativeValue doesn't reach Workday's
+        state there; select the textarea and use document.execCommand('insertText', false, text).
+      - Date parts (month, year) are spinbuttons: click the month and type MMYYYY.
   linkedin:
     hosts: [www.linkedin.com]
     account: candidate is signed in
