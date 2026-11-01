@@ -1,6 +1,5 @@
 .venv/
 .venv-py*/
-uv.lock
 node_modules/
 __pycache__/
 *.egg-info/
