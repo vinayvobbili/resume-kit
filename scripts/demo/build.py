@@ -189,6 +189,15 @@ def slides(caps: dict) -> list[tuple[str, str, str]]:
     ]
 
 
+# Kokoro's dictionary only knows the verb ("ri-ZOOM"), so the noun ("REZ-oo-may") is spelled out with misaki's own
+# override, "[word](/phonemes/)". Applied in this order: plural, singular, then the name's hyphen.
+RESUME_SOUND = "ɹˈɛzəmˌA"
+PHONETIC = {r"\bresumes\b": f"[resumes](/{RESUME_SOUND}z/)",
+            r"\bresume\b": f"[resume](/{RESUME_SOUND}/)",
+            r"(?<=\))-kit\b": " kit",
+            r"\bMCP\b": "M C P",
+            r"\bPDF\b": "P D F"}
+
 # The music bed and stings (`slidecast compose -o DIR` makes them), and how loud each plays.
 AUDIO = {"music": ("music_bed.wav", {"volume": 0.3, "fade_in": 1.0, "fade_out": 3.0, "duck": True, "duck_db": 16}),
          "intro": ("intro_sting.wav", {"volume": 0.75}),
@@ -209,7 +218,7 @@ def build(out: Path, music: Path | None = None) -> dict:
     entries[-1]["tail_pad"] = 1.6
     spec = {"width": 1920, "height": 1080, "fps": 25,
             "tts": {"provider": "mlx", "voice": "af_heart",  # Kokoro in-process: pip install 'slidecast[mlx]'
-                    "phonetic": {r"\bresume-kit\b": "resume kit", r"\bMCP\b": "M C P", r"\bPDF\b": "P D F"}}}
+                    "phonetic": PHONETIC}}
     where = (music or out).expanduser().resolve()
     missing = [name for name, _ in AUDIO.values() if not (where / name).is_file()]
     if music and missing:

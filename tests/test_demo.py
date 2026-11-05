@@ -3,6 +3,7 @@ machine that built the video leaks into a slide."""
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -83,6 +84,14 @@ def test_build_music_settings(tmp_path):
     spec = build.build(tmp_path)
     assert spec["music"]["volume"] == 0.3 and spec["music"]["duck_db"] == 16
     assert all(e["tail_pad"] == 1.3 for e in spec["slides"][1:-1])
+
+
+def test_resume_is_spoken_as_the_noun_not_the_verb():
+    spoken = "A resume, two resumes, resume draft and resume-kit"
+    for pattern, replacement in build.PHONETIC.items():
+        spoken = re.sub(pattern, replacement, spoken)
+    noun = f"[resume](/{build.RESUME_SOUND}/)"
+    assert spoken == f"A {noun}, two [resumes](/{build.RESUME_SOUND}z/), {noun} draft and {noun} kit"
 
 
 def test_missing_music_dir_is_an_error(tmp_path):
