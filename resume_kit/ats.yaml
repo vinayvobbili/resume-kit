@@ -77,6 +77,8 @@ systems:
         (straight quotes for '', brackets for parentheses). A value set with setNativeValue does not reach Workday''s
         state there; select the textarea and use document.execCommand(''insertText'', false, text).'
       - Date parts (month, year) are spinbuttons. Click the month and type MMYYYY.
+      - A prefilled date can show today yet fail as "required" (the disability form's Date). Retyping the same value
+        changes nothing. Pick another day in the calendar, wait for it to save, then pick the right day.
   linkedin:
     hosts: [www.linkedin.com]
     account: candidate is signed in
