@@ -1,0 +1,12 @@
+Staff Detection Engineer: 79/100, must-haves 4/5
+  Gaps (must-haves not fully met):
+    - Production Kubernetes security experience
+      real gap, don't add it; guardrail kubernetes: Only tutorial-level Kubernetes; nothing production.
+  Requirements:
+    ✅ years_experience (must-have) “Senior Security Engineer at Northwind Traders (5 yrs 6 mos, current role)”
+    ✅ python (must-have) “Automated phishing triage with a Python and SOAR pipeline”
+    ✅ sigma_or_siem_query (must-have) “Moved 300+ detections to detection-as-code: Sigma rules with unit tests ...”
+    ✅ aws_security (must-have) “Designed organization-wide IAM guardrails (SCPs, permission boundaries) for 140 AWS accounts”
+    ❌ kubernetes_security (must-have)
+    ✅ giac_certifications (nice-to-have) “Certifications: AWS Certified Security – Specialty, GIAC Certified Incident Handler (GCIH)”
+    🟡 open_source_tooling (nice-to-have) “Moved 300+ detections to detection-as-code”

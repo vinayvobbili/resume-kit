@@ -1,0 +1,8 @@
+# Demo only: a version whose summary claims something guardrails.yaml rules out, so `resume check` fails it.
+extends: base
+title: Globex — Platform Security Engineer
+output: Alex_Rivera_Resume_Globex_Platform
+headline: Platform Security Engineer  •  Cloud Security & Detection
+summary: >-
+  Security engineer with 8 years across cloud security and detection engineering. Hardened production
+  Kubernetes clusters, built IAM boundaries for 140 AWS accounts, and moved detections to code with tests in CI.

@@ -23,6 +23,9 @@ resume-kit-mcp = "resume_kit.mcp_server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["resume_kit"]
 
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/**/*.gif", "docs/**/*.mp4"]  # the README's demo; GitHub serves them
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"

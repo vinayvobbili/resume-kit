@@ -1,0 +1,29 @@
+# Demo only: extra bullets that capture.py adds to the demo's copy of the example profile, role id -> {fact id: text}.
+northwind:
+  ir_drills: >-
+    Ran quarterly incident-response tabletop drills with engineering and legal, and turned each round's findings
+    into runbook changes that the on-call rotation reviewed
+  red_team: >-
+    Partnered with an outside red team on two engagements, then fixed every high finding within the quarter and
+    added a detection for each technique that went unnoticed
+  training: >-
+    Wrote and taught a secure-coding workshop for 120 engineers, with hands-on labs built on the team's own
+    service template
+  vendor_review: >-
+    Reviewed 25 vendor security questionnaires a year, and cut the average turnaround from two weeks to three days
+    with a shared answer library
+  access_reviews: >-
+    Automated the quarterly access review for 40 internal systems, replacing a spreadsheet process that took
+    three people a week with a report owners approve in an afternoon
+  logging_standard: >-
+    Defined the logging standard for new services, so every team ships structured audit logs that the detection
+    pipeline can parse without per-service work
+  bug_bounty: >-
+    Triaged the private bug bounty program, answering reporters within one business day and fixing every
+    critical finding inside the 14-day SLA
+contoso:
+  siem_migration: >-
+    Migrated 90 correlation rules from a legacy SIEM to Splunk, retiring duplicates and documenting each rule's
+    owner and data source
+  onboarding: >-
+    Wrote the SOC onboarding guide and shadowed six new analysts through their first month of on-call

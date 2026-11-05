@@ -1,0 +1,9 @@
+# Demo only: a version that picks every bullet, including the extra ones capture.py adds to the demo's copy of the
+# profile (fixtures/extra-bullets.yaml), so the one-page target is missed.
+extends: base
+title: Acme Corp — Everything
+output: Alex_Rivera_Resume_Acme_Everything
+roles:
+  northwind: [iam_guardrails, detection_as_code, ir_lead, paved_road, threat_models, ir_drills, red_team, training,
+              vendor_review, access_reviews, logging_standard, bug_bounty]
+  contoso: [soc_triage, phishing_automation, vuln_program, siem_migration, onboarding]

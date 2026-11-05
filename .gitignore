@@ -7,3 +7,5 @@ __pycache__/
 .ruff_cache/
 # personal form answers never belong in this repo
 answers.yaml
+# The demo video's copied content, slides and renders (scripts/demo/make-video).
+scripts/demo/out/

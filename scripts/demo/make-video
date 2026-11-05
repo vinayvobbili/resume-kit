@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Rebuild the README's demo video from the bundled example: run the demo's real commands on it, write the slides
+# and narration, and render them with slidecast. See scripts/demo/README.md.
+#
+#   scripts/demo/make-video [OUT] [--music DIR] [--docs]
+#
+# OUT defaults to scripts/demo/out (git ignores it). --docs also copies the MP4 and GIF to docs/ for the README.
+# Set PYTHON (resume-kit's environment, default .venv/bin/python) or SLIDECAST to use other installs.
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+
+out="scripts/demo/out"
+music=()
+docs=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --music) music=(--music "$2"); shift 2 ;;
+    --docs) docs=1; shift ;;
+    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) out="$1"; shift ;;
+  esac
+done
+python="${PYTHON:-.venv/bin/python}"
+slidecast="${SLIDECAST:-slidecast}"
+# The voice (mlx-audio) installs a spaCy model into the active environment on first use, so point it at
+# slidecast's own.
+export VIRTUAL_ENV="${VIRTUAL_ENV:-$(dirname "$(dirname "$(command -v "$slidecast")")")}"
+
+mkdir -p "$out"
+"$python" scripts/demo/capture.py "$out"
+# A music bed and stings, unless --music brought some. Seeded, so the same each time.
+if [ ${#music[@]} -eq 0 ] && [ ! -f "$out/music_bed.wav" ]; then
+  "$slidecast" compose -o "$out" --length 95 --bpm 84 --seed 7
+fi
+"$python" scripts/demo/build.py "$out" ${music[@]+"${music[@]}"}
+"$slidecast" render "$out/reel.yaml" -o "$out/resume-kit-demo.mp4" --poster
+# The README's silent preview: 5 fps is plenty for slides, and keeps it small.
+ffmpeg -v error -y -i "$out/resume-kit-demo.mp4" -vf "fps=5,scale=960:-1:flags=lanczos,split[a][b];\
+[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+  "$out/demo.gif"
+if [ "$docs" = 1 ]; then
+  mkdir -p docs
+  cp "$out/resume-kit-demo.mp4" "$out/demo.gif" docs/
+  echo "Wrote docs/resume-kit-demo.mp4 and docs/demo.gif"
+else
+  echo "Wrote $out/resume-kit-demo.mp4 and $out/demo.gif (--docs copies both to docs/ for the README)"
+fi
