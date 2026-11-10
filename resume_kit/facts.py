@@ -71,8 +71,18 @@ def load(content: Path | None = None) -> Guardrails:
     return Guardrails(rules("forbidden"), rules("required"))
 
 
+def named_twice(open_source: list[str]) -> list[str]:
+    """Projects with a line of their own that an "Also:" line names again (a screener reads it as padding)."""
+    also = " ".join(item for item in open_source if item.startswith("Also:"))
+    leads = [m.group(1) for item in open_source if not item.startswith("Also:")
+             if (m := re.match(r"([\w][\w.-]*)\s*[:(]", item))]
+    return [f"named twice: {p} has its own line and is in the Also: line too" for p in leads
+            if re.search(rf"(?<![\w-]){re.escape(p)}(?![\w-])", also, re.IGNORECASE)]
+
+
 def check(spec: Spec, content: Path | None = None, reuse: bool = False) -> list[str]:
     """What a version breaks. A version already applied with skips rules added after it was sent, unless
-    `reuse`: it's about to be sent again, so every rule holds."""
-    return load(content).violations(spec.text(), "" if reuse else str(spec.meta.get("applied", "")),
-                                    tuple(spec.meta.get("waive", [])))
+    `reuse`: it's about to be sent again, so every rule holds (a project named twice included)."""
+    applied = "" if reuse else str(spec.meta.get("applied", ""))
+    problems = load(content).violations(spec.text(), applied, tuple(spec.meta.get("waive", [])))
+    return problems + ([] if applied else named_twice(spec.open_source))

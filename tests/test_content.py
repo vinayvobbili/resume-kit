@@ -216,6 +216,13 @@ def test_a_version_sent_again_is_held_to_every_rule(content, capsys):
     assert cli.main(["check", "--reuse", "base"]) == 1 and "cissp" in capsys.readouterr().out
 
 
+def test_a_project_named_twice_is_caught():
+    lines = ["acme-scan: finds things (Initech)", "Blog: “acme-scan: a post about it” is fine",
+             "widget (a tool): does more", "Also: acme-scan (finds things), globex-cli, widgetry"]
+    assert facts.named_twice(lines) == ["named twice: acme-scan has its own line and is in the Also: line too"]
+    assert facts.named_twice(lines[:3] + ["Also: globex-cli, widgetry"]) == []  # widget isn't widgetry
+
+
 def test_no_guardrails_file_means_no_rules(content):
     (content / "guardrails.yaml").unlink()
     assert facts.check(resolve("base")) == []
