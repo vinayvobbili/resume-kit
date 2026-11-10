@@ -66,7 +66,9 @@ def _shortlist(backend: str, pdf: Path, postings: list[Path], keychain: str) -> 
                            "--format", "json", "--backend", backend],
                           cwd=CACHE, capture_output=True, text=True, check=False, env=env)
     if proc.returncode:
-        raise ScoreError(f"shortlist failed ({proc.returncode}):\n{proc.stderr.strip()[-2000:]}")
+        # With --format json shortlist can put its error on stdout and leave stderr empty: show whichever says why
+        why = proc.stderr.strip() or proc.stdout.strip() or "(it said nothing)"
+        raise ScoreError(f"shortlist failed ({proc.returncode}):\n{why[-2000:]}")
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:

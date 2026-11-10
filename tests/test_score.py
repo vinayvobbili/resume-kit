@@ -127,6 +127,19 @@ def test_a_failing_backend_falls_back_to_the_next(fake_shortlist, monkeypatch, t
         score.score("acme", backend="claude,gpt")
 
 
+def test_a_failure_said_on_stdout_is_shown(fake_shortlist, monkeypatch, tmp_path):
+    # shortlist --format json can report its error on stdout with an empty stderr: the reason must still show
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    quiet = tmp_path / "quiet"
+    quiet.write_text(f"#!{sys.executable}\nimport sys\nif sys.argv[-1] == 'agy':\n    sys.exit(1)\n"
+                     "print('{\"error\": \"credit balance is too low\"}'); sys.exit(1)\n")
+    quiet.chmod(0o755)
+    monkeypatch.setenv("RESUME_KIT_SHORTLIST", str(quiet))
+    with pytest.raises(score.ScoreError, match=r"(?s)claude: shortlist failed \(1\):\n.*credit balance is too low.*"
+                                               r"agy: shortlist failed \(1\):\n\(it said nothing\)"):
+        score.score("acme", backend="claude,agy")
+
+
 def test_shortlist_failure_is_reported(fake_shortlist, monkeypatch, tmp_path):
     bad = tmp_path / "bad"
     bad.write_text(f"#!{sys.executable}\nimport sys\nsys.stderr.write('Error: model not found')\nsys.exit(1)\n")
