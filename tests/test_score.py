@@ -120,7 +120,7 @@ def test_a_failing_backend_falls_back_to_the_next(fake_shortlist, monkeypatch, t
     data = score.score("acme", backend="claude,agy,local")
     assert data["backend"] == "local" and list(data["failed_backends"]) == ["claude", "agy"]
     text = score.to_text(data)
-    assert "with local" in text and "⚠️  agy failed, so it fell back" in text
+    assert "with local" in text and "⚠️  agy failed, so it fell back: shortlist failed (1): agy is out of quota" in text
     with pytest.raises(score.ScoreError, match=r"claude: shortlist failed \(1\):\nclaude is out of quota\nagy: "):
         score.score("acme", backend="claude,agy")
     with pytest.raises(score.ScoreError, match="backend must be one of"):

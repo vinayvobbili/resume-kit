@@ -113,11 +113,17 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
     return data
 
 
+def _why(why: str) -> str:
+    """A failure on one line: its first ("shortlist failed (1):") and its last, where the reason is."""
+    lines = [line.strip() for line in why.splitlines() if line.strip()] or ["(no reason given)"]
+    return lines[0] if len(lines) == 1 else f"{lines[0]} {lines[-1]}"
+
+
 def to_text(data: dict, brief: bool = False) -> str:
     """brief: only the score, the gaps, and the requirements not fully met (what's left to fix)."""
     by = f" with {data['backend']}" if data.get("backend") else ""
     out = [f"Scored {data['pdf']} ({data['pages']} page(s)){by}"]
-    out += [f"⚠️  {b} failed, so it fell back: {why.splitlines()[0]}" for b, why in data.get("failed_backends", {}).items()]
+    out += [f"⚠️  {b} failed, so it fell back: {_why(why)}" for b, why in data.get("failed_backends", {}).items()]
     out += [f"⚠️  resume flag: {f}" for f in data.get("flags", [])]
     for m in data.get("matches", []):
         out += ["", f"{m['job']['title']}: {m['score']:.0f}/100, must-haves {m['must_haves_met']}/{m['must_haves_total']}",
