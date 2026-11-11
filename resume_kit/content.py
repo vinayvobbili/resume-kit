@@ -206,8 +206,14 @@ def resolve(name: str, content: Path | None = None) -> Spec:
             raise ContentError(f"version {name!r} has no {k!r} (set it, or extend a version that does)")
     drop = set(v["drop"])
 
+    removed: list[str] = []
+
     def pick(ids: list[str], pool: dict, where: str) -> list[str]:
         missing = [i for i in ids if i not in pool]
+        if missing and where == "open_source" and v.get("applied"):
+            removed.extend(missing)  # a sent version is a record: an item dropped from the profile later isn't its error
+            ids = [i for i in ids if i in pool]
+            missing = []
         if missing:
             raise ContentError(f"{name}: unknown {where} id(s) {missing}; known: {sorted(pool)}")
         return [pool[i] for i in ids if i not in drop]
@@ -250,5 +256,6 @@ def resolve(name: str, content: Path | None = None) -> Spec:
         certs_inline=bool(v.get("certs_inline", False)),
         pages=int(v.get("pages", profile.get("pages", 2))),
         posting=content / v["posting"] if v.get("posting") else None,
-        meta={k: v[k] for k in ("applied", "notes", "waive", "copy_to") if k in v},
+        meta={k: v[k] for k in ("applied", "notes", "waive", "copy_to") if k in v}
+        | ({"removed_ids": removed} if removed else {}),
     )

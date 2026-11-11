@@ -78,11 +78,15 @@ def cmd_diff(args) -> int:
 
 
 def cmd_check(args) -> int:
-    failed = 0
+    failed = skipped = 0
     for name in args.versions or list_versions():
-        problems = facts.check(resolve(name), reuse=args.reuse)
+        spec = resolve(name)
+        problems = facts.check(spec, reuse=args.reuse)
         failed += bool(problems)
+        skipped += bool(spec.meta.get("removed_ids")) and not args.reuse
         print(f"{name}: " + ("ok" if not problems else "\n  " + "\n  ".join(problems)))
+    if skipped:
+        print(f"{skipped} sent variants skipped for removed ids")
     return 1 if failed else 0
 
 

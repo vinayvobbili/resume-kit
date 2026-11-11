@@ -85,4 +85,6 @@ def check(spec: Spec, content: Path | None = None, reuse: bool = False) -> list[
     `reuse`: it's about to be sent again, so every rule holds (a project named twice included)."""
     applied = "" if reuse else str(spec.meta.get("applied", ""))
     problems = load(content).violations(spec.text(), applied, tuple(spec.meta.get("waive", [])))
+    if reuse and spec.meta.get("removed_ids"):
+        problems.append(f"unknown open_source id(s) {spec.meta['removed_ids']}: removed from the profile since it was sent")
     return problems + ([] if applied else named_twice(spec.open_source))

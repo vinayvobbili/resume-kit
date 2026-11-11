@@ -216,6 +216,23 @@ def test_a_version_sent_again_is_held_to_every_rule(content, capsys):
     assert cli.main(["check", "--reuse", "base"]) == 1 and "cissp" in capsys.readouterr().out
 
 
+def test_a_sent_version_keeps_open_source_ids_removed_later(content, capsys):
+    write_variant(content, "old", {"extends": "base", "output": "old", "applied": "2026-01-02",
+                                   "open_source": ["sigma_lint", "gone_tool"]})
+    write_variant(content, "new", {"extends": "base", "output": "new", "open_source": ["sigma_lint", "gone_tool"]})
+    assert resolve("old").meta["removed_ids"] == ["gone_tool"]
+    assert cli.main(["check", "old"]) == 0
+    assert "1 sent variants skipped for removed ids" in capsys.readouterr().out
+    assert cli.main(["check", "--reuse", "old"]) == 1  # sent again: the removed id is a real problem
+    with pytest.raises(ContentError, match="unknown open_source id"):
+        resolve("new")  # a current version still fails
+
+
+def test_no_summary_line_when_no_sent_version_has_removed_ids(content, capsys):
+    assert cli.main(["check"]) == 0
+    assert "skipped" not in capsys.readouterr().out
+
+
 def test_a_project_named_twice_is_caught():
     lines = ["acme-scan: finds things (Initech)", "Blog: “acme-scan: a post about it” is fine",
              "widget (a tool): does more", "Also: acme-scan (finds things), globex-cli, widgetry"]
