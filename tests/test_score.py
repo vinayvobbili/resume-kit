@@ -49,25 +49,22 @@ def fake_shortlist(tmp_path, monkeypatch):
     return argv_file
 
 
-def test_claude_takes_the_api_key_from_the_keychain_item_only_for_shortlist(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-    calls = []
+def test_the_paid_claude_backend_is_never_in_a_chain(fake_shortlist, tmp_path):
+    assert "claude" not in score.BACKENDS
+    assert not any(e.startswith("claude") for e in score.DEFAULT_CHAIN)
+    assert not any(e.startswith("claude") for e in score.configured_chain(tmp_path))
+    for asked in ("claude", "claude:claude-sonnet-5-5", "agy,claude,local"):
+        with pytest.raises(score.ScoreError, match="never used"):
+            score.score("acme", backend=asked)
+    assert not fake_shortlist.exists()  # shortlist was never even started
 
-    def fake_run(cmd, **kw):
-        calls.append(cmd)
-        return type("R", (), {"returncode": 0 if cmd[3] == "anthropic" else 44,
-                              "stdout": "sk-test\n" if cmd[3] == "anthropic" else ""})()
 
-    monkeypatch.setattr(score.subprocess, "run", fake_run)
-    assert score.claude_env("anthropic")["ANTHROPIC_API_KEY"] == "sk-test"
-    assert calls == [["security", "find-generic-password", "-s", "anthropic", "-w"]]
-    with pytest.raises(score.ScoreError, match="no API key in the keychain item 'other'"):
-        score.claude_env("other")
-    with pytest.raises(score.ScoreError, match="--keychain"):
-        score.claude_env("")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-set")
-    assert score.claude_env("anthropic")["ANTHROPIC_API_KEY"] == "sk-set" and len(calls) == 2
+def test_the_chain_comes_from_the_content_dirs_jobwatch_yaml(tmp_path):
+    (tmp_path / "jobwatch.yaml").write_text(
+        "scoring:\n  backend: agy\n  model: model-a\n  fallback:\n  - agy:model-b\n  - local\n")
+    assert score.configured_chain(tmp_path) == ["agy:model-a", "agy:model-b", "local"]
+    (tmp_path / "jobwatch.yaml").write_text("boards: []\n")
+    assert score.configured_chain(tmp_path) == list(score.DEFAULT_CHAIN)
 
 
 def test_scores_against_the_versions_own_posting(fake_shortlist, example_content):
@@ -75,8 +72,23 @@ def test_scores_against_the_versions_own_posting(fake_shortlist, example_content
     argv = json.loads(fake_shortlist.read_text())
     assert argv[0] == "jobs"
     assert argv[2] == str(example_content / "postings" / "acme-detection-engineer.md")
-    assert argv[-4:] == ["--format", "json", "--backend", "local"]
+    assert argv[-6:] == ["--format", "json", "--backend", "agy", "--model", "claude-sonnet-5-5-high"]
     assert data["matches"][0]["score"] == 71.4
+
+
+def test_an_agy_model_out_of_quota_falls_to_the_next_model_then_local(fake_shortlist, monkeypatch, tmp_path):
+    quota = tmp_path / "quota"  # exit 3 / RESOURCE_EXHAUSTED for every model but the second one and local
+    quota.write_text(f"#!{sys.executable}\nimport sys\na = sys.argv\nm = a[a.index('--model') + 1] if '--model' in a else ''\n"
+                     f"if a[a.index('--backend') + 1] == 'agy' and m != 'model-b':\n"
+                     f"    sys.stderr.write('RESOURCE_EXHAUSTED: ' + m); sys.exit(3)\n"
+                     f"print({json.dumps(json.dumps(CANNED))})\n")
+    quota.chmod(0o755)
+    monkeypatch.setenv("RESUME_KIT_SHORTLIST", str(quota))
+    data = score.score("acme", backend="agy:model-a,agy:model-b,local")
+    assert data["backend"] == "agy:model-b" and list(data["failed_backends"]) == ["agy:model-a"]
+    assert "RESOURCE_EXHAUSTED: model-a" in data["failed_backends"]["agy:model-a"]
+    data = score.score("acme", backend="agy:model-a,agy:model-c,local")
+    assert data["backend"] == "local" and list(data["failed_backends"]) == ["agy:model-a", "agy:model-c"]
 
 
 def test_gaps_matching_a_guardrail_are_labeled_real(fake_shortlist):
@@ -91,12 +103,11 @@ def test_gaps_matching_a_guardrail_are_labeled_real(fake_shortlist):
 
 
 def test_explicit_postings_override(fake_shortlist, tmp_path, monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     posting = tmp_path / "other.md"
     posting.write_text("# Other job")
-    score.score("base", [posting], backend="claude")
+    score.score("base", [posting], backend="local")
     argv = json.loads(fake_shortlist.read_text())
-    assert argv[2] == str(posting) and argv[-1] == "claude"
+    assert argv[2] == str(posting) and argv[-1] == "local"
 
 
 def test_version_without_posting_needs_one(fake_shortlist):
@@ -110,34 +121,32 @@ def test_missing_posting_file(fake_shortlist):
 
 
 def test_a_failing_backend_falls_back_to_the_next(fake_shortlist, monkeypatch, tmp_path):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    picky = tmp_path / "picky"  # only the local backend answers, the way claude or agy out of quota would fail
+    picky = tmp_path / "picky"  # only the local backend answers, the way agy out of quota would fail
     picky.write_text(f"#!{sys.executable}\nimport sys\nif sys.argv[-1] != 'local':\n"
                      f"    sys.stderr.write(sys.argv[-1] + ' is out of quota'); sys.exit(1)\n"
                      f"print({json.dumps(json.dumps(CANNED))})\n")
     picky.chmod(0o755)
     monkeypatch.setenv("RESUME_KIT_SHORTLIST", str(picky))
-    data = score.score("acme", backend="claude,agy,local")
-    assert data["backend"] == "local" and list(data["failed_backends"]) == ["claude", "agy"]
+    data = score.score("acme", backend="agy,local")
+    assert data["backend"] == "local" and list(data["failed_backends"]) == ["agy"]
     text = score.to_text(data)
     assert "with local" in text and "⚠️  agy failed, so it fell back: shortlist failed (1): agy is out of quota" in text
-    with pytest.raises(score.ScoreError, match=r"claude: shortlist failed \(1\):\nclaude is out of quota\nagy: "):
-        score.score("acme", backend="claude,agy")
+    with pytest.raises(score.ScoreError, match=r"agy: shortlist failed \(1\):\nagy is out of quota"):
+        score.score("acme", backend="agy")
     with pytest.raises(score.ScoreError, match="backend must be one of"):
-        score.score("acme", backend="claude,gpt")
+        score.score("acme", backend="agy,gpt")
 
 
 def test_a_failure_said_on_stdout_is_shown(fake_shortlist, monkeypatch, tmp_path):
     # shortlist --format json can report its error on stdout with an empty stderr: the reason must still show
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     quiet = tmp_path / "quiet"
-    quiet.write_text(f"#!{sys.executable}\nimport sys\nif sys.argv[-1] == 'agy':\n    sys.exit(1)\n"
-                     "print('{\"error\": \"credit balance is too low\"}'); sys.exit(1)\n")
+    quiet.write_text(f"#!{sys.executable}\nimport sys\nif sys.argv[-1] == 'local':\n    sys.exit(1)\n"
+                     "print('{\"error\": \"quota is used up\"}'); sys.exit(1)\n")
     quiet.chmod(0o755)
     monkeypatch.setenv("RESUME_KIT_SHORTLIST", str(quiet))
-    with pytest.raises(score.ScoreError, match=r"(?s)claude: shortlist failed \(1\):\n.*credit balance is too low.*"
-                                               r"agy: shortlist failed \(1\):\n\(it said nothing\)"):
-        score.score("acme", backend="claude,agy")
+    with pytest.raises(score.ScoreError, match=r"(?s)agy: shortlist failed \(1\):\n.*quota is used up.*"
+                                               r"local: shortlist failed \(1\):\n\(it said nothing\)"):
+        score.score("acme", backend="agy,local")
 
 
 def test_shortlist_failure_is_reported(fake_shortlist, monkeypatch, tmp_path):

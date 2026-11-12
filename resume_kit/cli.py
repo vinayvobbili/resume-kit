@@ -119,7 +119,7 @@ def cmd_draft(args) -> int:
 
 
 def cmd_score(args) -> int:
-    data = score.score(args.version, [Path(p) for p in args.postings], backend=args.backend, keychain=args.keychain)
+    data = score.score(args.version, [Path(p) for p in args.postings], backend=args.backend)
     print(json.dumps(data, indent=2, ensure_ascii=False) if args.json else score.to_text(data, brief=args.brief),
           end="")
     return 1 if data.get("errors") else 0
@@ -203,13 +203,11 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("score", help="score a version against job postings with shortlist-ai")
     s.add_argument("version")
     s.add_argument("postings", nargs="*", help="posting files (.md/.txt/.pdf/.docx); default: the version's `posting:`")
-    s.add_argument("--backend", default=os.environ.get("RESUME_KIT_BACKEND", "local"),
-                   help="claude, agy or local, or several in the order to try (claude,agy,local: each that fails "
-                        "falls back to the next); local keeps the resume on this machine (default, or "
-                        "$RESUME_KIT_BACKEND); claude needs ANTHROPIC_API_KEY or --keychain")
-    s.add_argument("--keychain", default=os.environ.get("RESUME_KIT_KEYCHAIN", ""),
-                   help="macOS keychain item holding the Anthropic API key, when ANTHROPIC_API_KEY isn't set "
-                        "(default $RESUME_KIT_KEYCHAIN)")
+    s.add_argument("--backend", default=os.environ.get("RESUME_KIT_BACKEND"),
+                   help="agy or local (agy:<model> picks a model), or several in the order to try "
+                        "(agy:model-a,agy:model-b,local: each that fails or is out of quota falls back to the "
+                        "next). Default $RESUME_KIT_BACKEND, else the `scoring:` block of jobwatch.yaml in the "
+                        "content dir, else agy then local. Free scorers only: the paid claude API is never used")
     s.add_argument("--json", action="store_true", help="print shortlist's full JSON")
     s.add_argument("--brief", action="store_true",
                    help="print only the score, the gaps, and the requirements not fully met")

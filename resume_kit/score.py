@@ -14,13 +14,18 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import yaml
+
 from . import facts
 from .build import build
 from .content import ContentError, content_dir, resolve
 
 CACHE = Path(os.environ.get("RESUME_KIT_CACHE", Path.home() / ".cache" / "resume-kit"))
 MARK = {"met": "✅", "partial": "🟡", "not_met": "❌"}
-BACKENDS = ("claude", "agy", "local")  # shortlist-ai's backends; agy runs on the Antigravity subscription's quota
+# Free scorers only, never shortlist-ai's paid `claude` (Anthropic API) backend: agy runs on the Antigravity
+# subscription's quota, local is the shared on-device server. An entry is `backend` or `backend:model`.
+BACKENDS = ("agy", "local")
+DEFAULT_CHAIN = ("agy:claude-sonnet-5-5-high", "agy:gemini-4-hydrogen-medium", "agy:gemini-4-argon-high", "local")
 
 
 class ScoreError(RuntimeError):
@@ -39,32 +44,32 @@ def find_shortlist() -> str:
     return exe
 
 
-def claude_env(keychain: str = "") -> dict[str, str]:
-    """The environment for shortlist's Claude backend: ANTHROPIC_API_KEY as set, or from the macOS keychain item
-    named `keychain` (only into shortlist's environment; never printed or logged)."""
-    env = dict(os.environ)
-    if env.get("ANTHROPIC_API_KEY") or env.get("ANTHROPIC_AUTH_TOKEN"):
-        return env
-    if not keychain:
-        raise ScoreError("the claude backend needs ANTHROPIC_API_KEY, or --keychain naming the macOS keychain item "
-                         "that holds it")
+def configured_chain(content: Path) -> list[str]:
+    """The scoring chain from the content directory's jobwatch.yaml `scoring:` block (backend, model, fallback),
+    else DEFAULT_CHAIN."""
     try:
-        r = subprocess.run(["security", "find-generic-password", "-s", keychain, "-w"], capture_output=True,
-                           text=True, timeout=30, check=False)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        raise ScoreError(f"couldn't read the keychain item {keychain!r}: {type(e).__name__}") from None
-    if r.returncode or not r.stdout.strip():
-        raise ScoreError(f"no API key in the keychain item {keychain!r}: add one with "
-                         f"`security add-generic-password -s {keychain} -a \"$USER\" -w`")
-    return env | {"ANTHROPIC_API_KEY": r.stdout.strip()}
+        block = (yaml.safe_load((content / "jobwatch.yaml").read_text()) or {}).get("scoring") or {}
+    except (OSError, yaml.YAMLError, AttributeError):
+        block = {}
+    first = block.get("backend")
+    if not first:
+        return list(DEFAULT_CHAIN)
+    if block.get("model") and ":" not in first:
+        first = f"{first}:{block['model']}"
+    return [first, *map(str, block.get("fallback") or [])]
 
 
-def _shortlist(backend: str, pdf: Path, postings: list[Path], keychain: str) -> dict:
-    env = claude_env(keychain) if backend == "claude" else None
+def _split(entry: str) -> tuple[str, str | None]:
+    name, _, model = entry.partition(":")
+    return name, model or None
+
+
+def _shortlist(backend: str, pdf: Path, postings: list[Path]) -> dict:
+    name, model = _split(backend)
     # cwd=CACHE so shortlist's .shortlist-cache/ lands there and reruns reuse extractions.
-    proc = subprocess.run([find_shortlist(), "jobs", str(pdf), *map(str, postings),
-                           "--format", "json", "--backend", backend],
-                          cwd=CACHE, capture_output=True, text=True, check=False, env=env)
+    proc = subprocess.run([find_shortlist(), "jobs", str(pdf), *map(str, postings), "--format", "json",
+                           "--backend", name, *(["--model", model] if model else [])],
+                          cwd=CACHE, capture_output=True, text=True, check=False)
     if proc.returncode:
         # With --format json shortlist can put its error on stdout and leave stderr empty: show whichever says why
         why = proc.stderr.strip() or proc.stdout.strip() or "(it said nothing)"
@@ -75,8 +80,8 @@ def _shortlist(backend: str, pdf: Path, postings: list[Path], keychain: str) -> 
         raise ScoreError(f"shortlist returned non-JSON output:\n{proc.stdout[:500]}") from None
 
 
-def score(version: str, postings: list[Path] | None = None, backend: str = "local",
-          content: Path | None = None, keychain: str = "") -> dict:
+def score(version: str, postings: list[Path] | None = None, backend: str | None = None,
+          content: Path | None = None) -> dict:
     content = content or content_dir()
     spec = resolve(version, content)
     postings = [Path(p).expanduser().resolve() for p in postings] if postings else []
@@ -88,16 +93,16 @@ def score(version: str, postings: list[Path] | None = None, backend: str = "loca
         if not p.exists():
             raise ContentError(f"posting not found: {p}")
 
-    backends = [b.strip() for b in backend.split(",") if b.strip()]
-    if not backends or any(b not in BACKENDS for b in backends):
-        raise ScoreError(f"backend must be one of {', '.join(BACKENDS)}, or several in the order to try "
-                         f"(claude,agy,local), got {backend!r}")
+    backends = [b.strip() for b in backend.split(",") if b.strip()] if backend else configured_chain(content)
+    if not backends or any(_split(b)[0] not in BACKENDS for b in backends):
+        raise ScoreError(f"backend must be one of {', '.join(BACKENDS)} (agy:<model> picks a model), or several in "
+                         f"the order to try (agy,local); the paid claude backend is never used. Got {backend!r}")
     CACHE.mkdir(parents=True, exist_ok=True)
     built = build(version, CACHE / "builds", content=content)
     failed: dict[str, str] = {}
     for b in backends:  # in order: one that fails (no key, out of quota) hands the job to the next
         try:
-            data = _shortlist(b, built.pdf, postings, keychain)
+            data = _shortlist(b, built.pdf, postings)
             break
         except ScoreError as e:
             failed[b] = str(e)
