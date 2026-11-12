@@ -191,6 +191,8 @@ def slides(caps: dict) -> list[tuple[str, str, str]]:
 
 # Kokoro's dictionary only knows the verb ("ri-ZOOM"), so the noun ("REZ-oo-may") is spelled out with misaki's own
 # override, "[word](/phonemes/)". Applied in this order: plural, singular, then the name's hyphen.
+# slidecast's own KOKORO_FIXES say the noun too (commit e53c4ef), but the released 0.5.0 doesn't have it: drop
+# RESUME_SOUND and the two resume rules below once a slidecast release after 0.5.0 is what the demo installs.
 RESUME_SOUND = "ɹˈɛzəmˌA"
 PHONETIC = {r"\bresumes\b": f"[resumes](/{RESUME_SOUND}z/)",
             r"\bresume\b": f"[resume](/{RESUME_SOUND}/)",
