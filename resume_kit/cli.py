@@ -1,4 +1,4 @@
-"""resume: build, check, compare, and score tailored resume versions."""
+"""resume: build, check, compare, and score tailored resume versions, and render their cover letters."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from . import apply, draft, facts, score, trace
+from . import apply, cover, draft, facts, score, trace
 from .build import DEFAULT_OUT, BuildError, build, preview
 from .content import ContentError, content_dir, library, list_versions, picked, raw_version, resolve
 
@@ -111,6 +111,15 @@ def cmd_build(args) -> int:
     return 1 if bad else 0
 
 
+def cmd_cover(args) -> int:
+    result = cover.cover(args.letter, Path(args.out), args.name, args.to, args.version)
+    print(result.summary())
+    if args.preview:
+        for img in preview(result.pdf):
+            print(f"  preview: {img}")
+    return 0 if result.ok else 1
+
+
 def cmd_draft(args) -> int:
     text = sys.stdin.read() if args.posting == "-" else Path(args.posting).expanduser().read_text()
     d = draft.draft(args.name, text, title=args.title, parent=args.parent, output=args.output, force=args.force)
@@ -190,6 +199,17 @@ def main(argv: list[str] | None = None) -> int:
                    help="re-render a version already applied with as it was sent, without guardrails added since "
                         "(not a copy to send again)")
     s.set_defaults(fn=cmd_build)
+
+    s = sub.add_parser("cover", help="render a markdown cover letter to .docx + .pdf with the resume's letterhead; "
+                       "refuses a claim a guardrail forbids (a sentence that denies it passes, and is printed), warns past one page")
+    s.add_argument("letter", help="markdown file: paragraphs, optionally a first line '# Subject' and a greeting")
+    s.add_argument("--name", help="output file name without extension (default: the letter's file name)")
+    s.add_argument("--to", help="greeting: 'Dear <to>,' replaces the letter's own (default 'Dear Hiring Team,' "
+                   "when the letter has none)")
+    s.add_argument("--version", help="take the contact line from this resume version (it may hide or swap a link)")
+    s.add_argument("--out", default=str(DEFAULT_OUT), help=f"output directory (default {DEFAULT_OUT})")
+    s.add_argument("--preview", action="store_true", help="also write page JPEGs")
+    s.set_defaults(fn=cmd_cover)
 
     s = sub.add_parser("draft", help="draft a tailored version from a job posting (facts ordered by relevance)")
     s.add_argument("name", help="new version name, e.g. acme-sre")

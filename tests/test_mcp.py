@@ -1,5 +1,8 @@
 import asyncio
 import json
+import shutil
+
+import pytest
 
 from resume_kit.mcp_server import server
 
@@ -13,8 +16,15 @@ def call(name, args):
 
 def test_tools_are_registered():
     names = {t.name for t in asyncio.run(server.list_tools())}
-    assert names == {"list_versions", "show_version", "check_facts", "build_version", "score_version", "draft_version",
-                     "application_answers", "ats_playbook"}
+    assert names == {"list_versions", "show_version", "check_facts", "build_version", "build_cover_letter", "score_version",
+                     "draft_version", "application_answers", "ats_playbook"}
+
+
+@pytest.mark.skipif(not all(shutil.which(t) for t in ("node", "soffice", "pdfinfo", "pdftotext")),
+                    reason="needs node, LibreOffice, and poppler")
+def test_build_cover_letter_reports_pages(tmp_path):
+    data = call("build_cover_letter", {"letter": "acme-detection-engineer", "out_dir": str(tmp_path)})
+    assert data["ok"] and data["pages"] == 1 and data["pdf"] == str(tmp_path / "acme-detection-engineer.pdf")
 
 
 def test_list_versions_reports_content_dir(example_content):

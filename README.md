@@ -48,6 +48,7 @@ resume list                         # versions, the content dir in use, and appl
 resume draft acme-sre posting.md    # draft a tailored version from a posting
 resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}
+resume cover acme-letter            # letters/acme-letter.md -> ~/Downloads/acme-letter.{docx,pdf}, the resume's letterhead
 resume score acme                   # score against the version's posting
 ```
 

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import facts
-from .content import REPO, Spec, content_dir, resolve
+from .content import REPO, content_dir, resolve
 
 RENDER_JS = Path(__file__).with_name("render.js")
 DEFAULT_OUT = Path(os.environ.get("RESUME_KIT_OUT", Path.home() / "Downloads"))
@@ -39,6 +39,7 @@ class BuildResult:
     overflow: str  # text past the last allowed page, if any
     fill: float = 1.0  # how far down its usable height the last page's text reaches
     copies: list[Path] = field(default_factory=list)  # where copy_to put the PDF too
+    notes: list[str] = field(default_factory=list)  # what passed a check on a condition worth seeing (a cover letter's disclaimers)
 
     @property
     def ok(self) -> bool:
@@ -54,6 +55,7 @@ class BuildResult:
     def summary(self) -> str:
         line = f"{self.version}: {self.pages} page(s) -> {self.pdf}"
         line += "".join(f"\n  copied to {c}" for c in self.copies)
+        line += "".join(f"\n  {n}" for n in self.notes)
         if self.pages > self.target:
             line += f"\n  spills onto page {self.target + 1}:\n    " + self.overflow.strip().replace("\n", "\n    ")
         elif self.pages < self.target:
@@ -78,11 +80,11 @@ def ensure_node_deps() -> None:
         subprocess.run([npm, "install", "--silent"], cwd=REPO, check=True)
 
 
-def render_docx(spec: Spec, out: Path) -> None:
+def render_docx(doc, out: Path) -> None:
     ensure_node_deps()
     node = _need("node", "install Node.js")
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(spec.to_render_json(), f, ensure_ascii=False)
+        json.dump(doc.to_render_json(), f, ensure_ascii=False)
     try:
         subprocess.run([node, str(RENDER_JS), f.name, str(out)], check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
@@ -134,18 +136,23 @@ def build(version: str, out_dir: Path = DEFAULT_OUT, enforce_facts: bool = True,
                "Fix it (and set applied: to the new day), draft a new version, or re-render it as it was sent "
                "(--as-sent)." if applied and not as_sent and not facts.check(spec, content) else "")
         raise BuildError(f"{version} fails fact checks:\n  " + "\n  ".join(problems) + why)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    docx = out_dir / f"{spec.output}.docx"
-    render_docx(spec, docx)
-    pdf = to_pdf(docx)
-    pages = page_count(pdf)
-    overflow = page_text(pdf, spec.pages + 1, pages) if pages > spec.pages else ""
-    copies = []
+    result = typeset(spec, version, out_dir / f"{spec.output}.docx", spec.pages)
     for folder in spec.meta.get("copy_to", []):
         dest = Path(folder).expanduser()
         dest.mkdir(parents=True, exist_ok=True)
-        copies.append(Path(shutil.copy2(pdf, dest / pdf.name)))
-    return BuildResult(version, docx, pdf, pages, spec.pages, overflow, last_page_fill(pdf, pages), copies)
+        result.copies.append(Path(shutil.copy2(result.pdf, dest / result.pdf.name)))
+    return result
+
+
+def typeset(doc, name: str, docx: Path, target: int) -> BuildResult:
+    """Render anything with a to_render_json() (a resume Spec, a cover letter) to `docx` and its PDF, and
+    count the pages against `target`."""
+    docx.parent.mkdir(parents=True, exist_ok=True)
+    render_docx(doc, docx)
+    pdf = to_pdf(docx)
+    pages = page_count(pdf)
+    overflow = page_text(pdf, target + 1, pages) if pages > target else ""
+    return BuildResult(name, docx, pdf, pages, target, overflow, last_page_fill(pdf, pages))
 
 
 def preview(pdf: Path, out_dir: Path | None = None, dpi: int = 80) -> list[Path]:

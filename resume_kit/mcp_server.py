@@ -8,7 +8,7 @@ from pathlib import Path
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from . import apply, draft, facts, score
+from . import apply, cover, draft, facts, score
 from .build import DEFAULT_OUT, build, preview
 from .content import ContentError, content_dir, raw_version, resolve
 from .content import list_versions as _list_versions
@@ -60,6 +60,29 @@ def build_version(version: str, out_dir: str | None = None, with_preview: bool =
     r = build(version, Path(out_dir) if out_dir else DEFAULT_OUT, as_sent=as_sent)
     result = {"version": version, "pages": r.pages, "target_pages": r.target, "ok": r.ok,
               "last_page_fill": round(r.fill, 2), "docx": str(r.docx), "pdf": str(r.pdf)}
+    if r.overflow:
+        result["overflow_text"] = r.overflow
+    if r.long_name:
+        result["file_name_warning"] = r.long_name
+    if with_preview:
+        result["preview_images"] = [str(p) for p in preview(r.pdf)]
+    return result
+
+
+@server.tool()
+def build_cover_letter(letter: str, name: str | None = None, to: str | None = None, version: str | None = None,
+                       out_dir: str | None = None, with_preview: bool = False) -> dict:
+    """Render a markdown cover letter (a file path, or a name in the content directory's letters/) to .docx and
+    .pdf with the resume's letterhead and look, one page. It refuses a claim a forbidden guardrail matches, so a
+    letter can't claim what a resume can't; a sentence that denies the term ("I have not run X in production")
+    passes and comes back in `disclaimers`, to show the user. name: output file name without extension (default the letter's);
+    to: the greeting's addressee (default "Hiring Team" when the letter has no greeting); version: take the
+    contact line from that resume version."""
+    r = cover.cover(letter, Path(out_dir) if out_dir else DEFAULT_OUT, name, to, version)
+    result = {"letter": letter, "pages": r.pages, "target_pages": r.target, "ok": r.ok, "docx": str(r.docx),
+              "pdf": str(r.pdf)}
+    if r.notes:
+        result["disclaimers"] = r.notes
     if r.overflow:
         result["overflow_text"] = r.overflow
     if r.long_name:

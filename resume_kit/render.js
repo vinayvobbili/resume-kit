@@ -37,10 +37,28 @@ const role = (title, org, dates) => new Paragraph({
 const para = (runs, opts = {}) => new Paragraph({ spacing: { after: 40 }, ...opts, children: runs });
 const centered = (after, run) => new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after }, children: [new TextRun(run)] });
 
-const children = [
+// A cover letter: the resume's name and contact line, then plain paragraphs (spec.letter, from resume_kit.cover).
+const letterBody = (letter) => {
+  const body = { size: 22 }; // 11 pt: a letter reads at a larger size than the resume's 10 pt
+  const p = (text, after, opts = {}) => new Paragraph({ spacing: { after, line: 264 }, ...opts, children: [new TextRun({ ...body, text })] });
+  return [
+    new Paragraph({ spacing: { after: 200 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: ACCENT, space: 4 } }, children: [] }),
+    ...(letter.subject ? [new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ ...body, text: letter.subject, bold: true })] })] : []),
+    p(letter.greeting, 160),
+    ...letter.paragraphs.map((t) => p(t, 160)),
+    p(letter.closing, 60, { keepNext: true }),
+    new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ ...body, text: spec.name, bold: true, color: ACCENT })] }),
+  ];
+};
+
+const header = [
   centered(20, { text: spec.name, bold: true, size: 34, color: ACCENT }),
-  centered(20, { text: spec.headline, size: 20, color: '444444' }),
+  ...(spec.headline ? [centered(20, { text: spec.headline, size: 20, color: '444444' })] : []),
   centered(60, { text: spec.contact, size: 18 }),
+];
+
+const children = spec.letter ? [...header, ...letterBody(spec.letter)] : [
+  ...header,
 
   heading('Summary'),
   para([new TextRun(spec.summary)]),

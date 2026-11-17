@@ -38,6 +38,11 @@ class ContentError(ValueError):
     pass
 
 
+def contact_line(contact: list[str]) -> str:
+    """The letterhead's contact line: a resume's and a cover letter's both."""
+    return "  |  ".join(contact)
+
+
 def content_dir() -> Path:
     """RESUME_KIT_CONTENT, else ~/.config/resume-kit/content, else the bundled example."""
     if env := os.environ.get("RESUME_KIT_CONTENT"):
@@ -75,7 +80,7 @@ class Spec:
         return {
             "name": self.name,
             "headline": self.headline,
-            "contact": "  |  ".join(self.contact),
+            "contact": contact_line(self.contact),
             "summary": self.summary,
             "skills": self.skills,
             "roles": self.roles,
@@ -88,7 +93,7 @@ class Spec:
 
     def text(self) -> str:
         """Plain-text rendering, used for diffs and guardrail checks."""
-        out = [self.name, self.headline, "  |  ".join(self.contact), "", "SUMMARY", self.summary, "", "CORE SKILLS"]
+        out = [self.name, self.headline, contact_line(self.contact), "", "SUMMARY", self.summary, "", "CORE SKILLS"]
         out += [f"• {s}" for s in self.skills]
         out += ["", "PROFESSIONAL EXPERIENCE"]
         for r in self.roles:

@@ -80,12 +80,27 @@ resume draft acme-sre posting.md    # draft a tailored version from a posting
 resume check                        # guardrails on every version
 resume build acme --preview         # -> ~/Downloads/<output>.{docx,pdf}; page JPEGs go to ~/.cache/resume-kit/previews
 resume build --all --out /tmp/x     # RESUME_KIT_OUT also sets the default directory
+resume cover acme-detection-engineer --name Alex_Rivera_Cover_Acme --to "Acme Detection Team"
+                                    # a markdown letter -> <out>/Alex_Rivera_Cover_Acme.{docx,pdf}; see Cover letters
 resume score acme                   # score against the version's posting (or pass posting files)
 resume score acme --brief           # just the score, the gaps, and what isn't fully met
 resume score acme --backend agy:model-a,agy:model-b,local   # try each in order; one that fails or is out of quota falls to the next
 resume answers eeo                  # standard form answers
 resume ats jobs.ashbyhq.com --js    # quirks of the ATS behind a URL, with JS helpers
 ```
+
+## Cover letters
+
+`resume cover LETTER [--name OUT] [--to "Hiring Team"] [--version V] [--out DIR] [--preview]` renders a cover letter written as markdown to `.docx` and `.pdf` with the same letterhead (your name and contact line from `profile.yaml`), fonts and margins as `resume build`, so a letter and a resume sent together look like one set. Files go where `build` writes (`--out`, else `RESUME_KIT_OUT`, else `~/Downloads`), named `--name` or the letter's file name. `LETTER` is a path, or a name in the content directory's `letters/` (see `examples/content/letters/`).
+
+A letter is plain paragraphs separated by blank lines:
+
+- An optional first line `# Subject` becomes a bold subject line.
+- A first paragraph that opens "Dear", "Hello" or "Hi" is the greeting. Without one the greeting is "Dear Hiring Team,"; `--to Globex` writes "Dear Globex," and replaces the letter's own.
+- A last paragraph of only a closing ("Sincerely,") and your name is the sign-off; the name always comes from `profile.yaml`, and the closing defaults to "Sincerely,".
+- `--version` takes the contact line from that resume version, for one that hides or swaps a link.
+
+The letter is held to the `forbidden` rules in `guardrails.yaml` (the ones `resume check` runs on resumes), and nothing is rendered if a sentence claims one. Unlike a resume, a letter may name a forbidden term to deny it: a sentence with a cue such as "have not", "haven't", "never", "no hands-on", "without", "rather than", "instead of" or "not yet" passes, and the build prints it as `disclaimer, allowed: <rule id>: <sentence>` so you see what got through ("have not only run X" is no cue). `resume build` has no such leniency. The target is one page: it warns, with the text that spilled over, when the letter runs onto a second.
 
 ## Scoring
 
@@ -123,6 +138,7 @@ The server has these tools:
 - `show_version`
 - `check_facts`
 - `build_version` (optionally with preview images)
+- `build_cover_letter`
 - `score_version`
 - `application_answers`
 - `ats_playbook`
