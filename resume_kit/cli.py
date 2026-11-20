@@ -227,7 +227,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="agy or local (agy:<model> picks a model), or several in the order to try "
                         "(agy:model-a,agy:model-b,local: each that fails or is out of quota falls back to the "
                         "next). Default $RESUME_KIT_BACKEND, else the `scoring:` block of jobwatch.yaml in the "
-                        "content dir, else agy then local. Free scorers only: the paid claude API is never used")
+                        "content dir, else agy then local. Free scorers only: the paid claude API is used only as "
+                        "claude:<model> until YYYY-MM-DD, until that day (an API credit that ends)")
     s.add_argument("--json", action="store_true", help="print shortlist's full JSON")
     s.add_argument("--brief", action="store_true",
                    help="print only the score, the gaps, and the requirements not fully met")

@@ -127,6 +127,8 @@ A gap without a guardrail note usually means the experience is there but the res
 
 Install shortlist-ai separately (`pip install 'shortlist-ai[local]'`; drop `[local]` if you'll only use `--backend claude`), or point `RESUME_KIT_SHORTLIST` at its `shortlist` executable. `--backend local`, the default, runs an MLX model on Apple Silicon so the resume never leaves your machine. `--backend claude` uses the Anthropic API.
 
+`resume score` itself uses free scorers (agy, then local) and never the paid `claude` backend: `claude` in a list of several backends is skipped with a notice, and `claude` alone is refused. The one opt-in is for an API credit that ends: write the entry with its last day, `claude:claude-sonnet-5-5 until 2026-12-20` (in `--backend`, `$RESUME_KIT_BACKEND` or the `fallback` of the `scoring:` block). Until that day (in New York time) it is tried first and the others follow; on that day and after, it is skipped with a notice like any claude entry, and alone it is refused. A date that isn't YYYY-MM-DD, or a missing model, counts as no date. resume-kit checks only the date: jobwatch keeps the spend caps (`jobwatch credit`).
+
 ## MCP server
 
 ```sh

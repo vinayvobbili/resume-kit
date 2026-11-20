@@ -1,5 +1,6 @@
 import json
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -64,6 +65,68 @@ def test_claude_in_a_shared_backend_list_is_skipped_with_a_notice(fake_shortlist
     assert data["backend"] == "agy" and data["skipped_backends"] == ["claude"]
     assert fake_shortlist.exists() and "claude" not in json.loads(fake_shortlist.read_text())
     assert "⚠️  skipped claude: the paid claude backend is never used for scoring" in score.to_text(data)
+
+
+UNTIL = "claude:claude-sonnet-5-5 until 2026-12-20"
+
+
+@pytest.fixture
+def on(monkeypatch):
+    """Sets the New York day the credit window is judged on."""
+    def set_day(text):
+        monkeypatch.setattr(score, "today_eastern", lambda now=None: date.fromisoformat(text))
+    return set_day
+
+
+@pytest.mark.parametrize("now, open_", [
+    ("2026-12-19T23:59:00-05:00", True),    # the day before
+    ("2026-12-20T00:00:00-05:00", False),   # the day itself
+    ("2026-12-21T09:00:00-05:00", False),   # after
+    ("2026-12-20T04:59:00+00:00", True),    # still the 19th in New York
+    ("2026-12-20T05:00:00+00:00", False),
+])
+def test_a_credit_entry_is_open_before_its_day_and_closed_on_and_after_it(now, open_):
+    assert score.credit_open(UNTIL, datetime.fromisoformat(now)) is open_
+
+
+@pytest.mark.parametrize("entry", ["claude:claude-sonnet-5-5", "claude until 2026-12-20", "agy until 2026-12-20",
+                                   "claude:claude-sonnet-5-5 until 2026-13-40", "claude:claude-sonnet-5-5 until soon"])
+def test_only_a_claude_entry_with_a_model_and_a_real_date_can_be_open(entry):
+    assert not score.credit_open(entry, datetime.fromisoformat("2026-11-19T12:00:00-05:00"))
+
+
+def test_a_dated_claude_entry_before_its_day_is_used_first_and_asked_for_as_plain_claude(fake_shortlist, on):
+    on("2026-11-19")
+    data = score.score("acme", backend=f"agy,{UNTIL},local")
+    argv = json.loads(fake_shortlist.read_text())
+    assert argv[-4:] == ["--backend", "claude", "--model", "claude-sonnet-5-5"]
+    assert data["backend"] == "claude:claude-sonnet-5-5" and data["skipped_backends"] == []
+
+
+def test_a_claude_only_list_works_with_the_date_and_errors_without_it(fake_shortlist, on):
+    on("2026-11-19")
+    assert score.score("acme", backend=UNTIL)["backend"] == "claude:claude-sonnet-5-5"
+    fake_shortlist.unlink()
+    with pytest.raises(score.ScoreError, match="never used"):
+        score.score("acme", backend="claude:claude-sonnet-5-5")
+    assert not fake_shortlist.exists()
+
+
+def test_a_dated_claude_entry_on_or_after_its_day_is_skipped_with_a_notice_and_alone_it_errors(fake_shortlist, on):
+    on("2026-12-20")
+    data = score.score("acme", backend=f"{UNTIL},agy,local")
+    assert data["backend"] == "agy" and data["skipped_backends"] == [UNTIL]
+    assert "claude" not in json.loads(fake_shortlist.read_text())
+    assert f"⚠️  skipped {UNTIL}: its credit window ended" in score.to_text(data)
+    with pytest.raises(score.ScoreError, match="never used"):
+        score.score("acme", backend=UNTIL)
+
+
+def test_the_chain_from_jobwatch_yaml_can_carry_a_dated_claude_entry(tmp_path, fake_shortlist, on):
+    on("2026-11-19")
+    (tmp_path / "jobwatch.yaml").write_text(
+        f"scoring:\n  backend: agy\n  model: model-a\n  fallback:\n  - {UNTIL}\n  - local\n")
+    assert score.configured_chain(tmp_path) == ["agy:model-a", UNTIL, "local"]
 
 
 def test_the_chain_comes_from_the_content_dirs_jobwatch_yaml(tmp_path):

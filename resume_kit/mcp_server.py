@@ -109,7 +109,8 @@ def draft_version(name: str, posting_text: str, title: str | None = None, parent
 @server.tool()
 def score_version(version: str, postings: list[str] | None = None, backend: str | None = None) -> dict:
     """Score the built resume against job postings (file paths; default: the version's posting) with
-    shortlist-ai, with free scorers only (never the paid Claude API). backend: agy or local, or several in the
+    shortlist-ai, with free scorers only (the paid Claude API only as "claude:<model> until YYYY-MM-DD", before
+    that day). backend: agy or local, or several in the
     order to try ("agy:model-a,agy:model-b,local"; one out of quota falls to the next); default
     $RESUME_KIT_BACKEND, else jobwatch.yaml's `scoring:` chain in the content dir, else agy then local. Returns per-job score, must-haves met, gaps, and per-requirement
     verdicts with quotes, plus which backend scored and why any before it failed. gap_notes marks gaps that a

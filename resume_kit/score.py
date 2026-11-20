@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -25,6 +27,11 @@ MARK = {"met": "✅", "partial": "🟡", "not_met": "❌"}
 # Free scorers only, never shortlist-ai's paid `claude` (Anthropic API) backend: agy runs on the Antigravity
 # subscription's quota, local is the shared on-device server. An entry is `backend` or `backend:model`.
 BACKENDS = ("agy", "local")
+try:
+    from zoneinfo import ZoneInfo
+    EASTERN = ZoneInfo("America/New_York")
+except (ImportError, KeyError):  # no tz database (Windows without tzdata): a fixed offset, an hour off in summer at worst
+    EASTERN = timezone(timedelta(hours=-5))
 DEFAULT_CHAIN = ("agy:claude-sonnet-5-5-high", "agy:gemini-4-hydrogen-medium", "agy:gemini-4-argon-high", "local")
 
 
@@ -60,8 +67,36 @@ def configured_chain(content: Path) -> list[str]:
 
 
 def _split(entry: str) -> tuple[str, str | None]:
-    name, _, model = entry.partition(":")
+    name, _, model = split_until(entry)[0].partition(":")
     return name, model or None
+
+
+_UNTIL = re.compile(r"\s+until\s+(\S+)\s*$")
+
+
+def split_until(entry: str) -> tuple[str, str]:
+    """An entry without its " until YYYY-MM-DD" (jobwatch's way to write a Claude API credit that ends), and that
+    date as written ("" when it has none)."""
+    m = _UNTIL.search(entry)
+    return (entry[:m.start()].strip(), m[1]) if m else (entry.strip(), "")
+
+
+def today_eastern(now: datetime | None = None) -> date:
+    """The date in New York, where the credit's end is counted (`now` in any time zone; naive means UTC)."""
+    now = now or datetime.now(UTC)
+    return (now if now.tzinfo else now.replace(tzinfo=UTC)).astimezone(EASTERN).date()
+
+
+def credit_open(entry: str, now: datetime | None = None) -> bool:
+    """A claude entry with a valid `until` date that hasn't come yet in New York: the one way the paid backend is
+    used. On the date itself and after, or with no date or one that isn't a date, it isn't."""
+    bare, until = split_until(entry)
+    if _split(bare)[0] != "claude" or not _split(bare)[1]:
+        return False
+    try:
+        return today_eastern(now) < date.fromisoformat(until)
+    except ValueError:
+        return False
 
 
 def _shortlist(backend: str, pdf: Path, postings: list[Path]) -> dict:
@@ -94,16 +129,20 @@ def score(version: str, postings: list[Path] | None = None, backend: str | None 
             raise ContentError(f"posting not found: {p}")
 
     backends = [b.strip() for b in backend.split(",") if b.strip()] if backend else configured_chain(content)
-    # A shared list like RESUME_KIT_BACKEND=claude,agy,local may name the paid backend: skip it, don't fail.
-    skipped = [b for b in backends if _split(b)[0] == "claude"] if len(backends) > 1 else []
+    # A shared list like RESUME_KIT_BACKEND=claude,agy,local may name the paid backend: skip it, don't fail. Only a
+    # claude entry with an `until` date that hasn't come (an API credit that ends) is used: it goes first.
+    skipped = [b for b in backends if _split(b)[0] == "claude" and not credit_open(b)] if len(backends) > 1 else []
     backends = [b for b in backends if b not in skipped] or backends
-    if not backends or any(_split(b)[0] not in BACKENDS for b in backends):
+    backends = sorted(backends, key=lambda b: not credit_open(b))
+    if not backends or any(_split(b)[0] not in BACKENDS and not credit_open(b) for b in backends):
         raise ScoreError(f"backend must be one of {', '.join(BACKENDS)} (agy:<model> picks a model), or several in "
-                         f"the order to try (agy,local); the paid claude backend is never used. Got {backend!r}")
+                         f"the order to try (agy,local); the paid claude backend is never used, except as "
+                         f"claude:<model> until YYYY-MM-DD while that day hasn't come. Got {backend!r}")
     CACHE.mkdir(parents=True, exist_ok=True)
     built = build(version, CACHE / "builds", content=content)
     failed: dict[str, str] = {}
     for b in backends:  # in order: one that fails (no key, out of quota) hands the job to the next
+        b = split_until(b)[0]
         try:
             data = _shortlist(b, built.pdf, postings)
             break
@@ -131,8 +170,12 @@ def to_text(data: dict, brief: bool = False) -> str:
     """brief: only the score, the gaps, and the requirements not fully met (what's left to fix)."""
     by = f" with {data['backend']}" if data.get("backend") else ""
     out = [f"Scored {data['pdf']} ({data['pages']} page(s)){by}"]
-    if data.get("skipped_backends"):
-        out.append(f"⚠️  skipped {', '.join(data['skipped_backends'])}: the paid claude backend is never used for scoring")
+    plain = [b for b in data.get("skipped_backends", []) if not split_until(b)[1]]
+    ended = [b for b in data.get("skipped_backends", []) if split_until(b)[1]]
+    if plain:
+        out.append(f"⚠️  skipped {', '.join(plain)}: the paid claude backend is never used for scoring")
+    out += [f"⚠️  skipped {b}: its credit window ended (or its date isn't one: YYYY-MM-DD), so the claude "
+            "backend isn't used" for b in ended]
     out += [f"⚠️  {b} failed, so it fell back: {_why(why)}" for b, why in data.get("failed_backends", {}).items()]
     out += [f"⚠️  resume flag: {f}" for f in data.get("flags", [])]
     for m in data.get("matches", []):
