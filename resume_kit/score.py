@@ -94,6 +94,9 @@ def score(version: str, postings: list[Path] | None = None, backend: str | None 
             raise ContentError(f"posting not found: {p}")
 
     backends = [b.strip() for b in backend.split(",") if b.strip()] if backend else configured_chain(content)
+    # A shared list like RESUME_KIT_BACKEND=claude,agy,local may name the paid backend: skip it, don't fail.
+    skipped = [b for b in backends if _split(b)[0] == "claude"] if len(backends) > 1 else []
+    backends = [b for b in backends if b not in skipped] or backends
     if not backends or any(_split(b)[0] not in BACKENDS for b in backends):
         raise ScoreError(f"backend must be one of {', '.join(BACKENDS)} (agy:<model> picks a model), or several in "
                          f"the order to try (agy,local); the paid claude backend is never used. Got {backend!r}")
@@ -108,7 +111,7 @@ def score(version: str, postings: list[Path] | None = None, backend: str | None 
             failed[b] = str(e)
     else:
         raise ScoreError("\n".join(f"{b}: {why}" for b, why in failed.items()))
-    data["backend"], data["failed_backends"] = b, failed
+    data["backend"], data["failed_backends"], data["skipped_backends"] = b, failed, skipped
 
     rails = facts.load(content)
     for m in data.get("matches", []):
@@ -128,6 +131,8 @@ def to_text(data: dict, brief: bool = False) -> str:
     """brief: only the score, the gaps, and the requirements not fully met (what's left to fix)."""
     by = f" with {data['backend']}" if data.get("backend") else ""
     out = [f"Scored {data['pdf']} ({data['pages']} page(s)){by}"]
+    if data.get("skipped_backends"):
+        out.append(f"⚠️  skipped {', '.join(data['skipped_backends'])}: the paid claude backend is never used for scoring")
     out += [f"⚠️  {b} failed, so it fell back: {_why(why)}" for b, why in data.get("failed_backends", {}).items()]
     out += [f"⚠️  resume flag: {f}" for f in data.get("flags", [])]
     for m in data.get("matches", []):

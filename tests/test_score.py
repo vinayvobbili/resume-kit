@@ -53,10 +53,17 @@ def test_the_paid_claude_backend_is_never_in_a_chain(fake_shortlist, tmp_path):
     assert "claude" not in score.BACKENDS
     assert not any(e.startswith("claude") for e in score.DEFAULT_CHAIN)
     assert not any(e.startswith("claude") for e in score.configured_chain(tmp_path))
-    for asked in ("claude", "claude:claude-sonnet-5-5", "agy,claude,local"):
+    for asked in ("claude", "claude:claude-sonnet-5-5", "claude,claude:model-a"):
         with pytest.raises(score.ScoreError, match="never used"):
             score.score("acme", backend=asked)
     assert not fake_shortlist.exists()  # shortlist was never even started
+
+
+def test_claude_in_a_shared_backend_list_is_skipped_with_a_notice(fake_shortlist):
+    data = score.score("acme", backend="claude,agy,local")  # the same list $RESUME_KIT_BACKEND holds
+    assert data["backend"] == "agy" and data["skipped_backends"] == ["claude"]
+    assert fake_shortlist.exists() and "claude" not in json.loads(fake_shortlist.read_text())
+    assert "⚠️  skipped claude: the paid claude backend is never used for scoring" in score.to_text(data)
 
 
 def test_the_chain_comes_from_the_content_dirs_jobwatch_yaml(tmp_path):
